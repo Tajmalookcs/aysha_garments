@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ayesha Garments Invoicing</title>
+<link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">
+<link rel="stylesheet" href="assets/icons/bootstrap-icons.min.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- LOGIN -->
+<main id="login" class="screen login is-active">
+  <section class="login-art" aria-hidden="true">
+    <svg id="quilt" viewBox="0 0 800 900" preserveAspectRatio="xMidYMid slice"></svg>
+  </section>
+  <section class="login-panel">
+    <form id="loginForm" class="login-form" novalidate>
+      <h1>Ayesha Garments</h1>
+      <p class="lead-line">Make invoices and send them to FBR, with or without internet.</p>
+      <div class="mb-3">
+        <label class="form-label" for="u">Username</label>
+        <input class="form-control form-control-lg" id="u" autocomplete="off">
+      </div>
+      <div class="mb-4">
+        <label class="form-label" for="p">Password</label>
+        <input class="form-control form-control-lg" id="p" type="password" autocomplete="off">
+      </div>
+      <button class="btn btn-thread btn-lg w-100" type="submit">Log in</button>
+      <p class="preview-note">Design preview. Any details will work, and nothing is saved.</p>
+    </form>
+  </section>
+</main>
+
+<!-- LOADING -->
+<div id="loading" class="loading" role="status" aria-live="polite" hidden>
+  <div class="stitcher" aria-hidden="true">
+    <span class="seam"></span>
+    <span class="needle"><i></i></span>
+  </div>
+  <p id="loadingText">Opening your invoices</p>
+</div>
+
+<!-- APP -->
+<div id="app" class="screen app">
+  <aside class="rail">
+    <div class="brand">
+      <label class="visually-hidden" for="company">Company</label>
+      <select id="company" class="company">
+        <option>Ayesha Garments</option>
+        <option>Sample Client 2</option>
+      </select>
+    </div>
+    <nav class="rail-nav" aria-label="Main">
+      <button class="nav-item is-active" data-go="dash"><i class="bi bi-house"></i>Dashboard</button>
+      <button class="nav-item" data-go="invoice"><i class="bi bi-receipt"></i>New invoice</button>
+      <button class="nav-item" disabled><i class="bi bi-journal-text"></i>Invoices</button>
+      <button class="nav-item" disabled><i class="bi bi-box-seam"></i>Products</button>
+      <button class="nav-item" disabled><i class="bi bi-people"></i>Customers</button>
+      <button class="nav-item" disabled><i class="bi bi-shield-check"></i>FBR setup</button>
+    </nav>
+    <button id="net" class="net" type="button" title="Preview only: click to see the offline state">
+      <i class="bi bi-wifi"></i><span>Online</span>
+    </button>
+  </aside>
+
+  <div class="workspace">
+    <p class="sample-banner"><i class="bi bi-info-circle"></i> Sample data only. Names, HS codes and tax rates here are placeholders, not tax advice.</p>
+
+    <!-- DASHBOARD -->
+    <section id="dash" class="view is-active">
+      <header class="page-head">
+        <div>
+          <h2 id="dashLine">2 invoices are waiting to reach FBR</h2>
+          <p class="sub">The oldest has been waiting 3 hours. They'll send when the connection allows.</p>
+        </div>
+        <button class="btn btn-thread" data-go="invoice"><i class="bi bi-plus-lg"></i> New invoice</button>
+      </header>
+
+      <dl class="today">
+        <div><dt>Invoices today</dt><dd>14</dd></div>
+        <div><dt>Sales today</dt><dd>Rs 486,200</dd></div>
+        <div><dt>Accepted by FBR</dt><dd>12</dd></div>
+        <div><dt>Rejected</dt><dd class="bad">0</dd></div>
+      </dl>
+
+      <h3 class="section-title">Recent invoices</h3>
+      <div class="table-responsive">
+        <table class="table ledger align-middle">
+          <thead><tr><th>Invoice</th><th>Buyer</th><th>Type</th><th class="text-end">Total</th><th>FBR status</th></tr></thead>
+          <tbody id="recent"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- NEW INVOICE -->
+    <section id="invoice" class="view">
+      <header class="page-head">
+        <div>
+          <h2>New invoice</h2>
+          <p class="sub">Invoice AG-000015. It saves on this computer first, then goes to FBR.</p>
+        </div>
+      </header>
+
+      <div class="invoice-grid">
+        <form id="invForm" class="invoice-main" novalidate>
+          <div class="row g-3 mb-4">
+            <div class="col-md-5">
+              <label class="form-label" for="buyer">Buyer</label>
+              <select class="form-select" id="buyer">
+                <option value="reg">Sample Textile Mills (Registered)</option>
+                <option value="unreg">Walk-in buyer (Unregistered)</option>
+                <option value="foreign">Sample Exports Ltd (Foreign)</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="date">Invoice date</label>
+              <input class="form-control" id="date" type="date">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="ref">Your reference (optional)</label>
+              <input class="form-control" id="ref" placeholder="Order no.">
+            </div>
+          </div>
+          <p id="exportNote" class="export-note" hidden><i class="bi bi-exclamation-triangle"></i> Export invoices can't be sent yet. FBR's rules for foreign buyers are still being confirmed.</p>
+
+          <div id="lines"></div>
+          <button class="btn btn-link add-line" type="button" id="addLine"><i class="bi bi-plus-lg"></i> Add item</button>
+        </form>
+
+        <aside class="summary">
+          <h3>Invoice total</h3>
+          <dl>
+            <div><dt>Value excluding tax</dt><dd id="tExcl"></dd></div>
+            <div><dt>Sales tax</dt><dd id="tST"></dd></div>
+            <div><dt>Further tax</dt><dd id="tFT"></dd></div>
+            <div><dt>Discount</dt><dd id="tDisc"></dd></div>
+          </dl>
+          <p class="grand"><span>Total</span><strong id="tGrand"></strong></p>
+          <button class="btn btn-thread btn-lg w-100" id="save" type="button">Save and send to FBR</button>
+
+          <ol id="track" class="track" aria-label="Invoice progress">
+            <li data-s="saved">Saved on this computer</li>
+            <li data-s="checked">Checked by FBR</li>
+            <li data-s="accepted">IRN received</li>
+          </ol>
+          <div id="result" class="result" hidden></div>
+        </aside>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="assets/bootstrap/bootstrap.bundle.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

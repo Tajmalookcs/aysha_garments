@@ -1,0 +1,18 @@
+# Client documents: identity and tax details. The repository is public.
+media/*
+!media/.gitkeep
+
+# Local data and secrets
+*.sqlite3
+.env
+.env.*
+secrets.py
+*.key
+backups/
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+staticfiles/
