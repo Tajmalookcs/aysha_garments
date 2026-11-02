@@ -15,7 +15,15 @@ FBR digital invoicing system for manufacturing units, starting with Ayesha Garme
 aysha_garments/
 ├── README.md               Project overview (this file)
 ├── CLAUDE.md               Working rules for Claude
-├── design_preview/         Design preview; open index.html in a browser
+├── billing/                Invoices, tax calculation, numbering and approval
+├── core/                   Companies, users, products and customers
+├── fbr/                    FBR token, lists, sending and call log
+├── config/                 Django settings
+├── templates/, static/     Screens, design and local Bootstrap, icons and fonts
+├── start.bat               Starts the app on Windows
+├── add_demo_data.bat       Adds labelled demo products, customers and invoices
+├── instance/               Local database and secret keys; created on first run, never pushed
+├── design_preview/         The approved design preview
 ├── docs/
 │   ├── PROJECT_BRIEF.md    What we are building, and open questions
 │   ├── BUILD_PLANS.md      Plan and approval record for each build
@@ -26,7 +34,13 @@ aysha_garments/
 
 ## Status
 
-The design preview is ready for review. No application code has been written yet.
+Core app built: companies, users, products, customers, invoices and approval. The FBR sandbox connection is built but not yet tested against FBR. Production and printing aren't built.
+
+## Run it
+
+Install Python 3.12 or newer, then double-click `start.bat`. The first run needs internet to install the packages. The app then opens at http://127.0.0.1:8000 and works without internet.
+
+Run the tests with `python manage.py test`.
 
 ## How we work
 

@@ -1,0 +1,9 @@
+{% load humanize_money %}<div class="table-responsive"><table class="table ledger align-middle">
+  <thead><tr><th>Invoice</th><th>Date</th><th>Buyer</th><th>Type</th><th class="text-end">Total</th><th>FBR status</th></tr></thead>
+  <tbody>{% for i in invoices %}<tr>
+    <td><a href="{% url 'invoice_detail' i.pk %}">{{ i.number }}</a></td>
+    <td>{{ i.invoice_date|date:"d M Y" }}</td><td>{{ i.buyer_name }}</td><td>{{ i.get_buyer_kind_display }}</td>
+    <td class="text-end num">Rs {{ i.grand_total|rupees }}</td>
+    <td><span class="status {{ i.status_class }}"><i class="bi {% if i.status_class == 'ok' %}bi-check-circle-fill{% elif i.status_class == 'bad' %}bi-x-circle-fill{% else %}bi-clock-fill{% endif %}"></i>{{ i.status_label }}</span></td>
+  </tr>{% endfor %}</tbody>
+</table></div>

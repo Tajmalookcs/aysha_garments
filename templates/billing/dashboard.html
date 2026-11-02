@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% load humanize_money %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    {% if not has_invoices %}
+      <h2>No invoices yet</h2>
+      <p class="sub">{% if has_products %}Make your first invoice to see it here.{% else %}Add your products first, then make your first invoice.{% endif %}</p>
+    {% elif saved_count %}
+      <h2>{{ saved_count }} invoice{{ saved_count|pluralize:" needs,s need" }} your approval</h2>
+      <p class="sub">Open a saved invoice and approve it to send it to FBR.{% if waiting_count %} {{ waiting_count }} approved and waiting to send.{% endif %}</p>
+    {% elif waiting_count == 0 %}
+      <h2>No invoices need attention</h2>
+      <p class="sub">{% if held_count %}{{ held_count }} export invoice{{ held_count|pluralize }} on hold until FBR's rules are confirmed.{% else %}Everything is up to date.{% endif %}</p>
+    {% else %}
+      <h2>{{ waiting_count }} approved invoice{{ waiting_count|pluralize:" is,s are" }} waiting to reach FBR</h2>
+      <p class="sub">The oldest has been waiting {{ oldest_waiting|timesince }}. Open each one to send it to FBR.</p>
+    {% endif %}
+  </div>
+  <a class="btn btn-thread" href="{% url 'invoice_new' %}"><i class="bi bi-plus-lg"></i> New invoice</a>
+</header>
+<dl class="today">
+  <div><dt>Invoices today</dt><dd>{{ today_count }}</dd></div>
+  <div><dt>Sales today</dt><dd>Rs {{ today_total|rupees }}</dd></div>
+  <div><dt>Accepted by FBR today</dt><dd>{{ today_accepted }}</dd></div>
+  <div><dt>Rejected</dt><dd {% if rejected_count %}style="color:var(--madder)"{% else %}class="bad"{% endif %}>{{ rejected_count }}</dd></div>
+</dl>
+<h3 class="section-title">Recent invoices</h3>
+{% if recent %}{% include "billing/_table.html" with invoices=recent %}
+{% else %}<div class="empty"><p class="mb-0">Your latest invoices will show here.</p></div>{% endif %}
+{% endblock %}

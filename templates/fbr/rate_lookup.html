@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Find tax rates{% endblock %}
+{% block content %}
+<header class="page-head"><div><h2>Find tax rates</h2><p class="sub">Asks FBR which rates apply to a transaction type today. Copy the rate text exactly into the product.</p></div></header>
+{% if not types or not provinces %}
+<div class="empty"><p class="mb-0">Download FBR's lists first.</p><a class="btn btn-thread" href="{% url 'fbr_setup' %}">Go to FBR setup</a></div>
+{% else %}
+<form method="get" class="row g-2 mb-4" data-loading="Asking FBR">
+  <div class="col-md-6"><label class="form-label" for="tt">Transaction type</label><select class="form-select" id="tt" name="tt">{% for t in types %}<option value="{{ t.transactioN_TYPE_ID }}" {% if tt == t.transactioN_TYPE_ID|stringformat:"s" %}selected{% endif %}>{{ t.transactioN_DESC }}</option>{% endfor %}</select></div>
+  <div class="col-md-3"><label class="form-label" for="pr">Province</label><select class="form-select" id="pr" name="pr">{% for p in provinces %}<option value="{{ p.stateProvinceCode }}" {% if pr == p.stateProvinceCode|stringformat:"s" %}selected{% endif %}>{{ p.stateProvinceDesc }}</option>{% endfor %}</select></div>
+  <div class="col-md-3 d-flex align-items-end"><button class="btn btn-thread w-100" type="submit">Find rates</button></div>
+</form>
+{% if rates is not None %}
+  {% if rates %}<div class="table-responsive"><table class="table ledger"><thead><tr><th>Rate as FBR writes it</th><th class="text-end">Value</th></tr></thead><tbody>{% for r in rates %}<tr><td>{{ r.desc }}</td><td class="text-end num">{{ r.value }}</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}<div class="empty"><p class="mb-0">FBR returned no rates for this choice.</p></div>{% endif %}
+{% endif %}
+{% endif %}
+{% endblock %}

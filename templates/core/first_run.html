@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Set up{% endblock %}
+{% block body %}
+<main class="screen login is-active">
+  <section class="login-art" aria-hidden="true"><svg id="quilt" viewBox="0 0 800 900" preserveAspectRatio="xMidYMid slice"></svg></section>
+  <section class="login-panel" style="align-items:flex-start">
+    <form method="post" class="login-form" style="max-width:460px" data-loading="Setting up your company">
+      {% csrf_token %}
+      <h1>Set up your company</h1>
+      <p class="lead-line">Enter the details exactly as FBR has them, then create your admin login.</p>
+      {% include "core/_fields.html" %}
+      <button class="btn btn-thread btn-lg w-100" type="submit">Set up company</button>
+    </form>
+  </section>
+</main>
+{% endblock %}

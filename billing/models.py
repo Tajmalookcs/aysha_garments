@@ -1,0 +1,159 @@
+"""Invoices. The local invoice is the record; the FBR number (IRN) is added when FBR accepts it.
+
+Details are copied onto the invoice at sale time, so later edits to a company,
+customer or product never change an invoice that was already made. There is
+deliberately no edit or delete screen.
+"""
+
+import uuid
+from decimal import Decimal
+
+from django.conf import settings
+from django.db import models
+
+from core.models import Company, Customer, Product
+
+ZERO = Decimal("0.00")
+
+
+class Invoice(models.Model):
+    class Status(models.TextChoices):
+        SAVED = "saved", "Saved: needs approval"
+        WAITING = "waiting", "Approved: waiting to send"
+        HELD = "held", "Held: export rules not confirmed"
+        CHECK = "check", "Unknown result: check in IRIS"
+        ACCEPTED = "accepted", "Accepted by FBR"
+        REJECTED = "rejected", "Rejected by FBR"
+
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="invoices")
+    number = models.CharField(max_length=30)
+    local_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    invoice_date = models.DateField()
+    your_reference = models.CharField(max_length=100, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.SAVED, db_index=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="approved_invoices",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    # Seller, as it was at sale time.
+    seller_name = models.CharField(max_length=200)
+    seller_ntn_cnic = models.CharField(max_length=13)
+    seller_province = models.CharField(max_length=60)
+    seller_address = models.TextField()
+
+    # Buyer, as it was at sale time.
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name="invoices")
+    buyer_name = models.CharField(max_length=200)
+    buyer_kind = models.CharField(max_length=15, choices=Customer.Kind.choices)
+    buyer_ntn_cnic = models.CharField(max_length=13, blank=True)
+    buyer_province = models.CharField(max_length=60, blank=True)
+    buyer_country = models.CharField(max_length=60, blank=True)
+    buyer_address = models.TextField(blank=True)
+
+    # Filled in by the FBR connection in a later build.
+    fbr_invoice_number = models.CharField("IRN", max_length=40, blank=True, db_index=True)
+    fbr_dated = models.CharField(max_length=40, blank=True)
+    fbr_environment = models.CharField(max_length=10, blank=True)
+    posted_at = models.DateTimeField(null=True, blank=True)
+    scenario_id = models.CharField(max_length=5, blank=True)
+    last_error_code = models.CharField(max_length=10, blank=True)
+    last_error = models.TextField(blank=True)
+
+    total_excl_tax = models.DecimalField(max_digits=16, decimal_places=2, default=ZERO)
+    total_sales_tax = models.DecimalField(max_digits=16, decimal_places=2, default=ZERO)
+    total_further_tax = models.DecimalField(max_digits=16, decimal_places=2, default=ZERO)
+    total_fed = models.DecimalField(max_digits=16, decimal_places=2, default=ZERO)
+    total_discount = models.DecimalField(max_digits=16, decimal_places=2, default=ZERO)
+    grand_total = models.DecimalField(max_digits=16, decimal_places=2, default=ZERO)
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-id"]
+        constraints = [models.UniqueConstraint(fields=["company", "number"], name="unique_invoice_number_per_company")]
+
+    def __str__(self):
+        return self.number
+
+    @property
+    def is_final(self):
+        """Only a production invoice FBR has accepted, with an IRN, can ever be final.
+
+        A sandbox or demo acceptance is never a real invoice.
+        """
+        return (
+            self.status == self.Status.ACCEPTED
+            and bool(self.fbr_invoice_number)
+            and self.fbr_environment == "production"
+        )
+
+    @property
+    def status_label(self):
+        if self.status == self.Status.ACCEPTED:
+            if self.fbr_environment == "sandbox":
+                return "Accepted in FBR sandbox (test)"
+            if self.fbr_environment != "production":
+                return "Accepted (demo only)"
+        if self.status == self.Status.REJECTED and self.your_reference.startswith("DEMO"):
+            return "Rejected (demo only)"
+        return self.get_status_display()
+
+    @property
+    def can_edit(self):
+        """Editing and deleting stop once an invoice is approved, so what FBR gets is what was approved."""
+        return self.status in (self.Status.SAVED, self.Status.HELD, self.Status.REJECTED)
+
+    @property
+    def can_approve(self):
+        return self.status in (self.Status.SAVED, self.Status.REJECTED)
+
+    @property
+    def can_send(self):
+        return self.status == self.Status.WAITING
+
+    @property
+    def status_class(self):
+        return {"accepted": "ok", "rejected": "bad"}.get(self.status, "wait")
+
+
+class InvoiceItem(models.Model):
+    class SoldBy(models.TextChoices):
+        PIECE = "piece", "Piece"
+        LOT = "lot", "Lot"
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="items")
+    product = models.ForeignKey(Product, null=True, on_delete=models.SET_NULL)
+    line_no = models.PositiveIntegerField()
+
+    # Product details, as they were at sale time.
+    description = models.CharField(max_length=255)
+    hs_code = models.CharField(max_length=9)
+    uom = models.CharField(max_length=100)
+    sale_type = models.CharField(max_length=150)
+    rate_label = models.CharField(max_length=100)
+    rate_percent = models.DecimalField(max_digits=6, decimal_places=2)
+
+    sold_by = models.CharField(max_length=5, choices=SoldBy.choices, default=SoldBy.PIECE)
+    entered_quantity = models.DecimalField(max_digits=14, decimal_places=4)
+    pieces_per_lot = models.PositiveIntegerField(null=True, blank=True)
+    quantity = models.DecimalField("Total pieces", max_digits=14, decimal_places=4)
+    price_per_piece = models.DecimalField(max_digits=14, decimal_places=2)
+
+    value_excl_tax = models.DecimalField(max_digits=16, decimal_places=2)
+    sales_tax = models.DecimalField(max_digits=16, decimal_places=2)
+    further_tax = models.DecimalField(max_digits=16, decimal_places=2)
+    fed_payable = models.DecimalField(max_digits=16, decimal_places=2, default=ZERO)
+    fixed_notified_value = models.DecimalField(max_digits=14, decimal_places=2, default=ZERO)
+    sro_schedule_no = models.CharField(max_length=50, blank=True)
+    sro_item_serial_no = models.CharField(max_length=50, blank=True)
+    fbr_invoice_no = models.CharField(max_length=50, blank=True)
+    discount = models.DecimalField(max_digits=16, decimal_places=2, default=ZERO)
+    total = models.DecimalField(max_digits=16, decimal_places=2)
+
+    class Meta:
+        ordering = ["line_no"]
+
+    def __str__(self):
+        return f"{self.invoice.number} line {self.line_no}"

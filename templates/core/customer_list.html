@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Customers{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div><h2>Customers</h2><p class="sub">Registered, unregistered and foreign buyers.</p></div>
+  <a class="btn btn-thread" href="{% url 'customer_new' %}"><i class="bi bi-plus-lg"></i> New customer</a>
+</header>
+{% if customers %}
+<div class="table-responsive"><table class="table ledger align-middle">
+  <thead><tr><th>Customer</th><th>Buyer type</th><th>NTN or CNIC</th><th>Province or country</th><th>Available</th></tr></thead>
+  <tbody>{% for c in customers %}<tr>
+    <td><a href="{% url 'customer_edit' c.pk %}">{{ c.name }}</a></td><td>{{ c.get_kind_display }}</td><td>{{ c.ntn_cnic|default:"Not needed" }}</td>
+    <td>{% if c.country %}{{ c.country }}{% else %}{{ c.province }}{% endif %}</td><td>{{ c.is_active|yesno:"Yes,No" }}</td>
+  </tr>{% endfor %}</tbody>
+</table></div>
+{% else %}
+<div class="empty"><p class="mb-0">Add your first customer to start making invoices.</p><a class="btn btn-thread" href="{% url 'customer_new' %}">Add a customer</a></div>
+{% endif %}
+{% endblock %}

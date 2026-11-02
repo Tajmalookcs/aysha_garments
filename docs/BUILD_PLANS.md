@@ -28,7 +28,7 @@ What was actually done, and any differences from the plan.
 
 ## Build 1: Core app
 
-Status: Step A done, waiting for design approval. Step B not started.
+Status: Done locally on 2026-11-02. Not pushed yet.
 Date proposed: 2026-11-02
 Date approved: 2026-11-02
 
@@ -42,17 +42,47 @@ A new invoicing app for manufacturing units that serves several clients and work
 Not included: FBR calls, the upload queue, final invoice printing.
 
 ### Decisions needed
-- Approve the design.
-- How many pieces make a lot, and does it vary?
 - How foreign buyers are reported to FBR.
+- How a discount is reported to FBR.
 
 ### Outcome
-Step A: `design_preview/` added. All data in it is sample data, and it makes no FBR calls.
+Step A: `design_preview/` added and the design approved by the owner.
+
+Step B: app built, with these points to note:
+- Added at the owner's request: invoices are saved first, and only an "Approve and send to FBR" click releases them. Until the FBR connection is built, the button only marks the invoice as approved.
+- One person uses the app and approves their own invoices. The Users screen is hidden from the menu.
+- Tax is worked out after discount.
+- Lot size varies, so pieces per lot is entered on each invoice line.
+- Foreign buyers' invoices are saved as held and can't be approved.
+- Invoices can be edited or deleted until approved, then they're locked. A deleted invoice's number is used again by the next new invoice.
+- `start.bat` hasn't been run on Windows yet.
+
+## Build 2: FBR connection (sandbox)
+
+Status: Built and tested against the spec's samples and a fake local server. Not yet tested against FBR.
+Date proposed: 2026-11-02
+Date approved: 2026-11-02
+
+### Goal
+Send approved invoices to the FBR sandbox and run the assigned scenarios.
+
+### Work
+- `fbr` app: encrypted token, FBR lists, rate lookup, validate then post, strict reply reading, permanent call log, scenarios table.
+- Unknown post results stop for a person to check IRIS, and are never resent automatically.
+- Rejected invoices stay editable. Sandbox and demo acceptances never count as final.
+
+Not included: production token, QR code and printing, sending export invoices.
+
+### Decisions needed
+- Confirm in sandbox: `valueSalesExcludingST` is sent after discount, and `extraTax` is an empty string as in the IRIS sample.
+- Confirm in sandbox: how FED and SRO fields work for the FED and SRO scenarios.
+
+### Outcome
+Waiting for the IP approval, then a first run against the FBR sandbox.
 
 ## Later builds (not approved yet)
 
-2. FBR connection: validate and post, response parsing, call log, encrypted token.
-3. Sandbox scenarios, run from the whitelisted computer.
+3. Run the sandbox scenarios from the whitelisted computer.
 4. Printing: IRN, QR code and FBR logo.
 5. Reliability: offline queue, sales register, backups.
 6. Go live: production token, first real invoice, training.

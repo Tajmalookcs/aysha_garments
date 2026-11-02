@@ -1,0 +1,77 @@
+{% extends "base.html" %}{% load humanize_money %}
+{% block title %}Invoice {{ invoice.number }}{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h2>Invoice {{ invoice.number }}</h2>
+    <p class="sub"><span class="status {{ invoice.status_class }}">{{ invoice.status_label }}</span></p>
+  </div>
+  {% if invoice.can_edit or invoice.can_send %}
+  <div class="invoice-actions">
+    {% if invoice.can_edit %}
+    <a class="btn btn-link" id="delete" href="{% url 'invoice_delete' invoice.pk %}">Delete</a>
+    <a class="btn btn-outline-thread btn-lg" id="edit" href="{% url 'invoice_edit' invoice.pk %}">Edit</a>
+    {% endif %}
+    {% if invoice.can_approve or invoice.can_send %}
+    <form method="post" class="send-form" action="{% if invoice.can_send %}{% url 'invoice_send' invoice.pk %}{% else %}{% url 'invoice_approve' invoice.pk %}{% endif %}" data-loading="Sending to FBR">
+      {% csrf_token %}
+      {% if scenarios %}
+      <label class="visually-hidden" for="scenario">Sandbox scenario</label>
+      <select class="form-select" id="scenario" name="scenario">
+        {% for c in scenarios %}<option value="{{ c }}" {% if c == suggested %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+      {% endif %}
+      {% if invoice.can_send %}<button class="btn btn-thread btn-lg" type="submit" id="send">Send to FBR</button>
+      {% else %}<button class="btn btn-thread btn-lg" type="submit" id="approve">Approve and send to FBR</button>{% endif %}
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</header>
+
+{% if invoice.status == 'saved' %}<p class="sub mb-2">Check the details below. You can still edit or delete it. Nothing goes to FBR until it's approved, and it's locked after that.</p>{% endif %}
+{% if invoice.status == 'waiting' %}<p class="sub mb-2">Approved{% if invoice.approved_by %} by {{ invoice.approved_by.username }}{% endif %}. Locked and waiting to send.</p>{% endif %}
+{% if invoice.last_error and invoice.status != 'check' %}<p class="flash error" role="alert">{{ invoice.last_error }}</p>{% endif %}
+{% if invoice.status == 'rejected' %}<p class="sub mb-2">Fix the problem with Edit, then send it again.</p>{% endif %}
+{% if invoice.status == 'check' %}
+<div class="export-note check-box" role="alert">
+  <p><strong>We don't know if FBR received this invoice.</strong> Don't send it again yet. Open the invoice dashboard in IRIS and look for this invoice, then tell the app what you found.</p>
+  <form method="post" action="{% url 'invoice_found' invoice.pk %}" class="row g-2 mb-2" data-loading="Saving">
+    {% csrf_token %}
+    <div class="col-md-8"><label class="form-label" for="irn">It's in IRIS: enter its FBR invoice number</label><input class="form-control" id="irn" name="irn"></div>
+    <div class="col-md-4 d-flex align-items-end"><button class="btn btn-thread w-100" type="submit">Save the number</button></div>
+  </form>
+  <form method="post" action="{% url 'invoice_not_found' invoice.pk %}" data-loading="Saving">
+    {% csrf_token %}<button class="btn btn-outline-thread" type="submit">It's not in IRIS: allow sending again</button>
+  </form>
+</div>
+{% endif %}
+{% if invoice.status == 'accepted' and invoice.fbr_environment == 'sandbox' %}<p class="flash success">Accepted in the FBR sandbox. This is a test and doesn't count as a real invoice.</p>{% endif %}
+{% if invoice.status == 'held' %}<p class="export-note"><i class="bi bi-exclamation-triangle"></i> This export invoice can't be approved or sent yet. FBR's rules for foreign buyers, and the tax shown here, still need to be confirmed.</p>{% endif %}
+{% if not invoice.is_final %}<p class="sub mb-4">This is not a final invoice. A final invoice needs an IRN from FBR's production system.</p>{% endif %}
+
+<div class="detail-grid">
+  <div><h3>Seller</h3><p>{{ invoice.seller_name }}</p><p>{{ invoice.seller_address }}</p><p>{{ invoice.seller_province }}</p><p>NTN or CNIC: {{ invoice.seller_ntn_cnic }}</p></div>
+  <div><h3>Buyer</h3><p>{{ invoice.buyer_name }} ({{ invoice.get_buyer_kind_display }})</p><p>{{ invoice.buyer_address }}</p><p>{% if invoice.buyer_country %}{{ invoice.buyer_country }}{% else %}{{ invoice.buyer_province }}{% endif %}</p>{% if invoice.buyer_ntn_cnic %}<p>NTN or CNIC: {{ invoice.buyer_ntn_cnic }}</p>{% endif %}</div>
+  <div><h3>Invoice</h3><p>Date: {{ invoice.invoice_date|date:"d M Y" }}</p>{% if invoice.your_reference %}<p>Your reference: {{ invoice.your_reference }}</p>{% endif %}<p>IRN: {{ invoice.fbr_invoice_number|default:"Not issued yet" }}</p>{% if invoice.scenario_id %}<p>Scenario: {{ invoice.scenario_id }}</p>{% endif %}</div>
+</div>
+
+<div class="table-responsive"><table class="table ledger align-middle">
+  <thead><tr><th>Item</th><th>HS code</th><th class="text-end">Pieces</th><th class="text-end">Price per piece</th><th class="text-end">Value</th><th class="text-end">Discount</th><th class="text-end">Rate</th><th class="text-end">Sales tax</th><th class="text-end">Further tax</th><th class="text-end">Total</th></tr></thead>
+  <tbody>{% for l in invoice.items.all %}<tr>
+    <td>{{ l.description }}{% if l.sold_by == 'lot' %}<div class="sub small">{{ l.entered_quantity|floatformat:"-4" }} lots of {{ l.pieces_per_lot }}</div>{% endif %}</td>
+    <td>{{ l.hs_code }}</td><td class="text-end num">{{ l.quantity|floatformat:"-4" }}</td><td class="text-end num">{{ l.price_per_piece|rupees }}</td>
+    <td class="text-end num">{{ l.value_excl_tax|rupees }}</td><td class="text-end num">{{ l.discount|rupees }}</td><td class="text-end num">{{ l.rate_label }}</td><td class="text-end num">{{ l.sales_tax|rupees }}</td>
+    <td class="text-end num">{{ l.further_tax|rupees }}</td><td class="text-end num">{{ l.total|rupees }}</td>
+  </tr>{% endfor %}</tbody>
+</table></div>
+
+<div class="totals">
+  <div><span>Value before discount</span><span>Rs {{ invoice.total_excl_tax|rupees }}</span></div>
+  <div><span>Discount</span><span>- Rs {{ invoice.total_discount|rupees }}</span></div>
+  <div><span>Sales tax</span><span>Rs {{ invoice.total_sales_tax|rupees }}</span></div>
+  <div><span>Further tax</span><span>Rs {{ invoice.total_further_tax|rupees }}</span></div>
+  {% if invoice.total_fed %}<div><span>FED</span><span>Rs {{ invoice.total_fed|rupees }}</span></div>{% endif %}
+  <div class="big"><span>Total</span><span>Rs {{ invoice.grand_total|rupees }}</span></div>
+</div>
+{% endblock %}

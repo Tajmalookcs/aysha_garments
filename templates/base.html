@@ -1,0 +1,59 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Digital Invoicing{% endblock %}</title>
+<link rel="stylesheet" href="{% static 'assets/bootstrap/bootstrap.min.css' %}">
+<link rel="stylesheet" href="{% static 'assets/icons/bootstrap-icons.min.css' %}">
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+<div id="loading" class="loading" role="status" aria-live="polite" hidden>
+  <div class="stitcher" aria-hidden="true"><span class="seam"></span><span class="needle"><i></i></span></div>
+  <p id="loadingText"></p>
+</div>
+{% block body %}
+<div class="screen app is-active">
+  <aside class="rail">
+    <div class="brand">
+      {% if memberships|length > 1 %}
+      <form method="post" action="{% url 'switch_company' %}" data-loading="Switching company">
+        {% csrf_token %}
+        <label class="visually-hidden" for="company">Company</label>
+        <select id="company" name="company" class="company" data-autosubmit>
+          {% for m in memberships %}<option value="{{ m.company_id }}" {% if m.company_id == company.pk %}selected{% endif %}>{{ m.company.business_name|title }}</option>{% endfor %}
+        </select>
+      </form>
+      {% else %}<p class="company mb-0">{{ company.business_name|title }}</p>{% endif %}
+    </div>
+    <nav class="rail-nav" aria-label="Main">
+      {% with n=request.resolver_match.url_name %}
+      <a class="nav-item {% if n == 'dashboard' %}is-active{% endif %}" href="{% url 'dashboard' %}"><i class="bi bi-house"></i>Dashboard</a>
+      <a class="nav-item {% if n == 'invoice_new' %}is-active{% endif %}" href="{% url 'invoice_new' %}"><i class="bi bi-receipt"></i>New invoice</a>
+      <a class="nav-item {% if n == 'invoice_list' or n == 'invoice_detail' or n == 'invoice_edit' or n == 'invoice_delete' %}is-active{% endif %}" href="{% url 'invoice_list' %}"><i class="bi bi-journal-text"></i>Invoices</a>
+      <a class="nav-item {% if n == 'customer_list' or n == 'customer_new' or n == 'customer_edit' %}is-active{% endif %}" href="{% url 'customer_list' %}"><i class="bi bi-people"></i>Customers</a>
+      {% if is_admin %}
+      <a class="nav-item {% if n == 'product_list' or n == 'product_new' or n == 'product_edit' %}is-active{% endif %}" href="{% url 'product_list' %}"><i class="bi bi-box-seam"></i>Products</a>
+      <a class="nav-item {% if n == 'company_edit' or n == 'company_new' %}is-active{% endif %}" href="{% url 'company_edit' %}"><i class="bi bi-building"></i>Company</a>
+      <a class="nav-item {% if n == 'fbr_setup' or n == 'fbr_rates' or n == 'fbr_log' %}is-active{% endif %}" href="{% url 'fbr_setup' %}"><i class="bi bi-shield-check"></i>FBR setup</a>
+      {% endif %}
+      {% endwith %}
+    </nav>
+    <div class="rail-bottom">
+      <div id="net" class="net"><i class="bi bi-wifi"></i><span>Online</span></div>
+      <form method="post" action="{% url 'logout' %}" class="rail-user">
+        {% csrf_token %}<span>{{ request.user.username }}</span><button type="submit">Log out</button>
+      </form>
+    </div>
+  </aside>
+  <main class="workspace">
+    {% for message in messages %}<p class="flash {{ message.tags }}" role="alert">{{ message }}</p>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}
+<script src="{% static 'js/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

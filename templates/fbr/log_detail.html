@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}FBR call{% endblock %}
+{% block content %}
+<header class="page-head"><div><h2>FBR call</h2><p class="sub">{{ entry.created_at|date:"d M Y, H:i:s" }}, {{ entry.method }} {{ entry.path }}, {% if entry.network_error %}{{ entry.network_error }}{% else %}HTTP {{ entry.http_status }}{% endif %}</p></div></header>
+<h3 class="section-title">What was sent</h3><pre class="raw">{{ entry.request_body|default:"(no body)" }}</pre>
+<h3 class="section-title">What FBR replied</h3><pre class="raw">{{ entry.response_body|default:"(no reply)" }}</pre>
+<a class="btn btn-link" href="{% url 'fbr_setup' %}">Back to FBR setup</a>
+{% endblock %}

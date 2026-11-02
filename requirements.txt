@@ -1,0 +1,15 @@
+# Versions are pinned so an install on a client's computer is predictable.
+Django==5.2.18
+asgiref==3.13.0
+sqlparse==0.6.1
+tzdata==2026.6
+whitenoise==6.12.0
+waitress==3.0.2
+requests==2.34.2
+certifi==2026.10.23
+charset-normalizer==3.5.2
+idna==3.20
+urllib3==2.8.0
+cryptography==50.0.2
+cffi==2.1.1
+pycparser==3.12

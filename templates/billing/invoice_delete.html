@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% load humanize_money %}
+{% block title %}Delete invoice {{ invoice.number }}{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h2>Delete invoice {{ invoice.number }}?</h2>
+    <p class="sub">{{ invoice.buyer_name }}, Rs {{ invoice.grand_total|rupees }}. This can't be undone. The next new invoice can use this number.</p>
+  </div>
+</header>
+<form method="post" data-loading="Deleting the invoice">
+  {% csrf_token %}
+  <button class="btn btn-danger" id="confirmDelete" type="submit">Delete invoice</button>
+  <a class="btn btn-link" href="{% url 'invoice_detail' invoice.pk %}">Keep invoice</a>
+</form>
+{% endblock %}

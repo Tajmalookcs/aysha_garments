@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div><h2>Users</h2><p class="sub">People who can log in to {{ company.business_name|title }}.</p></div>
+  <a class="btn btn-thread" href="{% url 'user_new' %}"><i class="bi bi-plus-lg"></i> Add user</a>
+</header>
+<div class="table-responsive"><table class="table ledger align-middle">
+  <thead><tr><th>Username</th><th>Role</th><th></th></tr></thead>
+  <tbody>{% for m in members %}<tr>
+    <td>{{ m.user.username }}</td><td>{{ m.get_role_display }}</td>
+    <td class="text-end">{% if m.user_id != request.user.pk %}
+      <form method="post" action="{% url 'user_remove' m.pk %}">{% csrf_token %}<button class="btn btn-link p-0" type="submit">Remove access</button></form>
+    {% endif %}</td>
+  </tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

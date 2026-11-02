@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="screen is-active" style="place-items:center;padding:16px;text-align:center">
+  <div>
+    <h1>You can't open this page</h1>
+    <p class="sub">{{ exception|default:"Your account doesn't have access. Ask an admin for help." }}</p>
+    <a class="btn btn-thread mt-3" href="/">Go to the dashboard</a>
+  </div>
+</main>
+{% endblock %}

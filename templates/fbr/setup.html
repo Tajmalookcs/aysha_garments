@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}FBR setup{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div><h2>FBR setup</h2><p class="sub">Sandbox only for now. Invoices sent from here are tests, not real invoices.</p></div>
+</header>
+
+<h3 class="section-title">Sandbox token</h3>
+<p class="sub mb-2">{% if credential %}A token is saved and encrypted (updated {{ credential.updated_at|date:"d M Y, H:i" }}). It's never shown again. Paste a new one only to replace it.{% else %}Copy the token from IRIS, under Digital Invoicing, Sandbox Environment, View Web API Environment Details.{% endif %}</p>
+<form method="post" action="{% url 'fbr_save_token' %}" class="row g-2 mb-2 setup-row" data-loading="Saving the token">
+  {% csrf_token %}
+  <div class="col-md-8"><label class="visually-hidden" for="token">Sandbox token</label><input class="form-control" id="token" name="token" type="password" autocomplete="off" placeholder="Paste the sandbox token"></div>
+  <div class="col-md-4"><button class="btn btn-thread w-100" id="saveToken" type="submit">Save token</button></div>
+</form>
+<div class="setup-actions mb-5">
+  <form method="post" action="{% url 'fbr_test' %}" data-loading="Connecting to FBR">{% csrf_token %}<button class="btn btn-outline-thread" id="testConn" type="submit" {% if not credential %}disabled{% endif %}>Test connection</button></form>
+  <form method="post" action="{% url 'fbr_download' %}" data-loading="Downloading FBR's lists">{% csrf_token %}<button class="btn btn-outline-thread" id="download" type="submit" {% if not credential %}disabled{% endif %}>Download FBR lists</button></form>
+  <a class="btn btn-link" href="{% url 'fbr_rates' %}">Find tax rates</a>
+</div>
+
+<h3 class="section-title">Sandbox scenarios</h3>
+<p class="sub mb-2">Enter the codes IRIS assigned to this company. Each needs one accepted invoice before FBR issues the production token.</p>
+<form method="post" action="{% url 'fbr_save_scenarios' %}" class="row g-2 mb-3 setup-row">
+  {% csrf_token %}
+  <div class="col-md-8"><label class="visually-hidden" for="scenarios">Assigned scenarios</label><input class="form-control" id="scenarios" name="scenarios" value="{{ company.sandbox_scenarios }}" placeholder="SN001, SN002"></div>
+  <div class="col-md-4"><button class="btn btn-thread w-100" id="saveScen" type="submit">Save scenarios</button></div>
+</form>
+{% if scenarios %}
+<p class="mb-2"><strong>{{ done_count }} of {{ scenarios|length }} accepted.</strong> To run one, make a product with the sale type shown, make an invoice with it, then choose the scenario when you approve.</p>
+<div class="table-responsive mb-5"><table class="table ledger align-middle">
+  <thead><tr><th>Scenario</th><th>Description</th><th>Sale type</th><th>Result</th></tr></thead>
+  <tbody>{% for s in scenarios %}<tr>
+    <td>{{ s.code }}</td><td class="wrap">{{ s.description }}</td><td class="wrap">{{ s.sale_type }}</td>
+    <td>{% if s.invoice %}<a href="{% url 'invoice_detail' s.invoice.pk %}"><span class="status ok"><i class="bi bi-check-circle-fill"></i>{{ s.invoice.number }}</span></a>{% else %}<span class="status wait"><i class="bi bi-clock-fill"></i>Not done</span>{% endif %}</td>
+  </tr>{% endfor %}</tbody>
+</table></div>
+{% endif %}
+
+<h3 class="section-title">FBR lists</h3>
+<div class="table-responsive mb-5"><table class="table ledger align-middle">
+  <thead><tr><th>List</th><th class="text-end">Rows</th><th>Downloaded</th></tr></thead>
+  <tbody>{% for l in lists %}<tr><td>{{ l.name }}</td><td class="text-end num">{% if l.row %}{{ l.row.data|length }}{% else %}0{% endif %}</td><td>{% if l.row %}{{ l.row.fetched_at|date:"d M Y, H:i" }}{% else %}Not yet{% endif %}</td></tr>{% endfor %}</tbody>
+</table></div>
+
+<h3 class="section-title">Latest calls to FBR</h3>
+{% if logs %}
+<div class="table-responsive"><table class="table ledger align-middle">
+  <thead><tr><th>Time</th><th>Invoice</th><th>Call</th><th>Result</th></tr></thead>
+  <tbody>{% for e in logs %}<tr><td><a href="{% url 'fbr_log' e.pk %}">{{ e.created_at|date:"d M, H:i:s" }}</a></td><td>{{ e.invoice_number }}</td><td class="wrap">{{ e.method }} {{ e.path }}</td><td>{% if e.network_error %}{{ e.network_error }}{% else %}HTTP {{ e.http_status }}{% endif %}</td></tr>{% endfor %}</tbody>
+</table></div>
+{% else %}<div class="empty"><p class="mb-0">Calls will show here. They're kept permanently, without the token.</p></div>{% endif %}
+{% endblock %}

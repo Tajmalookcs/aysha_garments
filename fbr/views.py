@@ -1,0 +1,130 @@
+import re
+
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+
+from billing.models import Invoice
+from core.decorators import admin_required
+
+from . import client, refs
+from .constants import REFERENCE_LISTS, SCENARIOS
+from .models import FbrCredential, RefList
+
+
+def assigned_scenarios(company):
+    return [c for c in re.split(r"[\s,]+", company.sandbox_scenarios.upper()) if c in SCENARIOS]
+
+
+@admin_required
+def setup(request):
+    company = request.company
+    credential = FbrCredential.objects.filter(company=company, environment="sandbox").first()
+    done = {}
+    for inv in company.invoices.filter(status=Invoice.Status.ACCEPTED, fbr_environment="sandbox").order_by("id"):
+        done.setdefault(inv.scenario_id, inv)
+    scenarios = [
+        {"code": c, "description": SCENARIOS[c][0], "sale_type": SCENARIOS[c][1], "invoice": done.get(c)}
+        for c in assigned_scenarios(company)
+    ]
+    return render(request, "fbr/setup.html", {
+        "credential": credential,
+        "scenarios": scenarios,
+        "done_count": sum(1 for s in scenarios if s["invoice"]),
+        "lists": [
+            {"name": n, "row": RefList.objects.filter(name=n).first()} for n in REFERENCE_LISTS
+        ],
+        "logs": company.fbr_logs.all()[:30],
+    })
+
+
+@require_POST
+@admin_required
+def save_token(request):
+    raw = request.POST.get("token", "").strip()
+    if len(raw) < 10 or any(c.isspace() for c in raw):
+        messages.error(request, "That doesn't look like a token. Copy it again from IRIS, with no spaces.")
+        return redirect("fbr_setup")
+    credential = FbrCredential.objects.filter(company=request.company, environment="sandbox").first() or FbrCredential(
+        company=request.company, environment="sandbox")
+    credential.token = raw
+    credential.save()
+    messages.success(request, "Sandbox token saved and encrypted.")
+    return redirect("fbr_setup")
+
+
+@require_POST
+@admin_required
+def save_scenarios(request):
+    entered = [c for c in re.split(r"[\s,]+", request.POST.get("scenarios", "").upper()) if c]
+    unknown = [c for c in entered if c not in SCENARIOS]
+    if unknown:
+        messages.error(request, f"These aren't FBR scenario codes: {', '.join(unknown)}.")
+    else:
+        request.company.sandbox_scenarios = ", ".join(entered)
+        request.company.save(update_fields=["sandbox_scenarios"])
+        messages.success(request, "Scenarios saved.")
+    return redirect("fbr_setup")
+
+
+@require_POST
+@admin_required
+def test_connection(request):
+    try:
+        result = client.call(request.company, "GET", REFERENCE_LISTS["provinces"][0])
+    except client.NoToken as exc:
+        messages.error(request, str(exc))
+        return redirect("fbr_setup")
+    if result.http_status == 200 and isinstance(result.data, list):
+        messages.success(request, f"Connected to FBR. It returned {len(result.data)} provinces.")
+    elif result.http_status == 401:
+        messages.error(request, "FBR refused the token. Check it in IRIS, and that your IP is approved.")
+    elif result.network_error:
+        messages.error(request, f"{result.network_error}. Your IP may not be approved yet. Check its status in IRIS.")
+    else:
+        messages.error(request, f"FBR returned HTTP {result.http_status}. Your IP may not be approved yet. Check its status in IRIS.")
+    return redirect("fbr_setup")
+
+
+@require_POST
+@admin_required
+def download_lists(request):
+    try:
+        saved, problems = refs.download_all(request.company)
+    except client.NoToken as exc:
+        messages.error(request, str(exc))
+        return redirect("fbr_setup")
+    if saved:
+        messages.success(request, f"Downloaded {len(saved)} FBR lists.")
+    if problems:
+        messages.error(request, "Couldn't download: " + "; ".join(problems))
+    return redirect("fbr_setup")
+
+
+@admin_required
+def rate_lookup(request):
+    types = refs.rows("transaction_types")
+    provinces = refs.rows("provinces")
+    context = {"types": types, "provinces": provinces, "rates": None, "tt": "", "pr": "", "today": timezone.localdate()}
+    tt, pr = request.GET.get("tt", ""), request.GET.get("pr", "")
+    if tt and pr:
+        context.update(tt=tt, pr=pr)
+        try:
+            result = refs.rates(request.company, on_date=context["today"], transaction_type_id=tt, province_code=pr)
+        except client.NoToken as exc:
+            messages.error(request, str(exc))
+        else:
+            if result.http_status == 200 and isinstance(result.data, list):
+                context["rates"] = [
+                    {"desc": r.get("ratE_DESC"), "value": r.get("ratE_VALUE")} for r in result.data if isinstance(r, dict)
+                ]
+            else:
+                messages.error(request, f"Couldn't get rates: {result.network_error or f'HTTP {result.http_status}'}.")
+    return render(request, "fbr/rate_lookup.html", context)
+
+
+@admin_required
+def log_detail(request, pk):
+    entry = get_object_or_404(request.company.fbr_logs, pk=pk)
+    return render(request, "fbr/log_detail.html", {"entry": entry})

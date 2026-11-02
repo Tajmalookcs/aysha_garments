@@ -1,0 +1,55 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}{% if invoice %}Edit invoice {{ invoice.number }}{% else %}New invoice{% endif %}{% endblock %}
+{% block content %}
+<header class="page-head">
+  {% if invoice %}<div><h2>Edit invoice {{ invoice.number }}</h2><p class="sub">Save your changes, then approve it to send it to FBR.</p></div>
+  {% else %}<div><h2>New invoice</h2><p class="sub">Invoice {{ next_number }}. Save it here first, then approve it to send it to FBR.</p></div>{% endif %}
+</header>
+{% if not has_products or not customers %}
+<div class="empty">
+  <p class="mb-0">{% if not has_products %}Add a product{% if not customers %} and a customer{% endif %}{% else %}Add a customer{% endif %} before making an invoice.</p>
+  {% if not has_products and is_admin %}<a class="btn btn-thread" href="{% url 'product_new' %}">Add a product</a>{% elif not has_products %}<p class="mb-0">Ask an admin to add products.</p>{% else %}<a class="btn btn-thread" href="{% url 'customer_new' %}">Add a customer</a>{% endif %}
+</div>
+{% else %}
+<form method="post" id="invForm" class="invoice-grid" novalidate data-loading="Saving on this computer">
+  {% csrf_token %}
+  <input type="hidden" name="lines" id="linesField">
+  <div class="invoice-main">
+    <div class="row g-3 mb-4">
+      <div class="col-md-5"><label class="form-label" for="buyer">Buyer</label>
+        <select class="form-select" id="buyer" name="customer"><option value="">Choose a buyer</option>
+          {% for c in customers %}<option value="{{ c.pk }}" {% if selected_customer == c.pk|stringformat:"d" %}selected{% endif %}>{{ c.name }} ({{ c.get_kind_display }})</option>{% endfor %}
+        </select></div>
+      <div class="col-md-3"><label class="form-label" for="date">Invoice date</label>
+        <input class="form-control" id="date" name="invoice_date" type="date" value="{{ selected_date|default:today }}"></div>
+      <div class="col-md-4"><label class="form-label" for="ref">Your reference (optional)</label>
+        <input class="form-control" id="ref" name="your_reference" value="{{ your_reference }}" maxlength="100" placeholder="Order no."></div>
+    </div>
+    <p id="exportNote" class="export-note" hidden><i class="bi bi-exclamation-triangle"></i> Export invoices can be saved but not sent yet. FBR's rules for foreign buyers, and the tax shown here, still need to be confirmed.</p>
+    <div id="lines"></div>
+    <button class="btn btn-link add-line" type="button" id="addLine"><i class="bi bi-plus-lg"></i> Add item</button>
+  </div>
+  <aside class="summary">
+    <h3>Invoice total</h3>
+    <dl>
+      <div><dt>Value before discount</dt><dd id="tExcl"></dd></div>
+      <div><dt>Discount</dt><dd id="tDisc"></dd></div>
+      <div><dt>Sales tax</dt><dd id="tST"></dd></div>
+      <div><dt>Further tax</dt><dd id="tFT"></dd></div>
+    </dl>
+    <p class="grand"><span>Total</span><strong id="tGrand"></strong></p>
+    <button class="btn btn-thread btn-lg w-100" id="save" type="submit">{% if invoice %}Save changes{% else %}Save invoice{% endif %}</button>
+    <ol class="track" aria-label="What happens next">
+      <li>Saved on this computer</li>
+      <li>Approved by you</li>
+      <li>Checked by FBR</li>
+      <li>IRN received</li>
+    </ol>
+  </aside>
+</form>
+{{ products_data|json_script:"products-data" }}
+{{ customers_data|json_script:"customers-data" }}
+{{ initial_lines|json_script:"initial-lines" }}
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/invoice.js' %}"></script>{% endblock %}
