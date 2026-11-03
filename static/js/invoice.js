@@ -89,6 +89,7 @@
   $("addLine").addEventListener("click", () => { lines.push(newLine()); render(); });
   $("buyer").addEventListener("change", calc);
   form.addEventListener("submit", () => {
+    $("offlineField").value = navigator.onLine ? "0" : "1";
     $("linesField").value = JSON.stringify(lines.map((l) => ({
       product: l.product, sold_by: l.sold_by, quantity: l.quantity,
       pieces_per_lot: l.pieces_per_lot, price: l.price, discount: l.discount,

@@ -143,6 +143,27 @@ Built and tested against the spec's samples and a fake local server.
 
 Also changed at the owner's request: the company now has a required NTN (0000000-0) and an optional CNIC. Invoices print only the NTN, and FBR receives its 7 digits.
 
+## Build D: Print and offline rules from FBR's Sales Tax Rules
+
+Status: Done locally on 2026-11-03. Not yet tested against FBR.
+Date proposed: 2026-11-03
+Date approved: 2026-11-03
+
+### Goal
+Cover what Rule 150R(13) and Rule 150XC require.
+
+### Work
+- Print: tax period, unit, and SRO and serial number where used.
+- Offline: invoices saved without internet, or that couldn't reach FBR, are marked as offline on screen and in print, with a 24-hour warning on the dashboard.
+- `docs/PRAL_QUESTIONS.md`: questions for PRAL support.
+
+### Decisions needed
+- The rules say a 7x7 mm QR, but PRAL's spec says 1x1 inch. The app follows PRAL's spec until PRAL confirms.
+- The e-invoicing software registration number isn't printed yet. Ask PRAL what it is when PRAL is the integrator.
+
+### Outcome
+Built and tested locally.
+
 ## Later builds (not approved yet)
 
 3. Run the sandbox scenarios from the whitelisted computer.

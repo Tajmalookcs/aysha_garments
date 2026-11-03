@@ -15,6 +15,7 @@
 <form method="post" id="invForm" class="invoice-grid" novalidate data-loading="Saving on this computer">
   {% csrf_token %}
   <input type="hidden" name="lines" id="linesField">
+  <input type="hidden" name="issued_offline" id="offlineField" value="0">
   <div class="invoice-main">
     <div class="row g-3 mb-4">
       <div class="col-md-5"><label class="form-label" for="buyer">Buyer</label>

@@ -30,6 +30,12 @@ def _finish(invoice, status, *, code="", error=""):
     invoice.save(update_fields=["status", "last_error_code", "last_error"])
 
 
+def _mark_offline(invoice):
+    """Rule 150XC: FBR couldn't be reached, so this invoice is now an offline invoice."""
+    invoice.issued_offline = True
+    invoice.save(update_fields=["issued_offline"])
+
+
 def send_invoice(invoice) -> SendResult:
     company = invoice.company
     mode = company.fbr_mode
@@ -60,6 +66,8 @@ def send_invoice(invoice) -> SendResult:
     checked = client.call(invoice.company, "POST", VALIDATE_PATH[mode], payload=payload, invoice=invoice)
     problem = _http_problem(checked)
     if problem:
+        if checked.network_error:
+            _mark_offline(invoice)
         _finish(invoice, Invoice.Status.WAITING, error=problem)
         return SendResult(False, problem)
     parsed = parse(checked.data, needs_irn=False)
@@ -74,6 +82,8 @@ def send_invoice(invoice) -> SendResult:
     # Step 2: post. From here, an unclear result might mean FBR has already issued an IRN.
     posted = client.call(invoice.company, "POST", POST_PATH[mode], payload=payload, invoice=invoice)
     if posted.not_sent or posted.http_status == 401:
+        if posted.not_sent:
+            _mark_offline(invoice)
         message = _http_problem(posted) or "Couldn't reach FBR."
         _finish(invoice, Invoice.Status.WAITING, error=message)
         return SendResult(False, message)

@@ -24,12 +24,14 @@
       <dl>
         <div><dt>{% if invoice.is_debit_note %}Note no.{% else %}Invoice no.{% endif %}</dt><dd>{{ invoice.number }}</dd></div>
         <div><dt>Date</dt><dd>{{ invoice.invoice_date|date:"d M Y" }}</dd></div>
+        <div><dt>Tax period</dt><dd>{{ invoice.invoice_date|date:"F Y" }}</dd></div>
         {% if invoice.is_debit_note %}<div><dt>Original IRN</dt><dd>{{ invoice.invoice_ref_no }}</dd></div>{% endif %}
         {% if invoice.your_reference %}<div><dt>Your reference</dt><dd>{{ invoice.your_reference }}</dd></div>{% endif %}
       </dl>
     </div>
   </header>
   {% if copy.notice %}<p class="notice">{{ copy.notice }}</p>{% endif %}
+  {% if invoice.issued_offline %}<p class="notice offline">Issued in offline mode.{% if not invoice.fbr_invoice_number %} To be uploaded to FBR within 24 hours of the connection returning.{% endif %}</p>{% endif %}
   <div class="seam"></div>
   <section class="buyer">
     <h3>Bill to</h3>
@@ -46,7 +48,7 @@
     </tr></thead>
     <tbody>{% for l in items %}<tr>
       <td>{{ l.line_no }}</td>
-      <td class="d"><b>{{ l.description }}</b>{% if l.sold_by == 'lot' %}<br><small>{{ l.entered_quantity|quantity }} lots of {{ l.pieces_per_lot }} pieces</small>{% endif %}</td>
+      <td class="d"><b>{{ l.description }}</b><br><small>Unit: {{ l.uom }}</small>{% if l.sold_by == 'lot' %}<br><small>{{ l.entered_quantity|quantity }} lots of {{ l.pieces_per_lot }} pieces</small>{% endif %}{% if l.sro_schedule_no or l.sro_item_serial_no %}<br><small>SRO {{ l.sro_schedule_no|default:"-" }}, serial {{ l.sro_item_serial_no|default:"-" }}</small>{% endif %}</td>
       <td>{{ l.hs_code }}</td>
       <td class="n">{{ l.quantity|quantity }}</td>
       <td class="n">{{ l.price_per_piece|rupees }}</td>

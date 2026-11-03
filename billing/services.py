@@ -189,7 +189,8 @@ def _save_items(invoice, computed):
 
 
 @transaction.atomic
-def create_invoice(*, company, customer, invoice_date, lines, your_reference="", user=None, original=None) -> Invoice:
+def create_invoice(*, company, customer, invoice_date, lines, your_reference="", user=None, original=None,
+                   issued_offline=False) -> Invoice:
     """Save an invoice with its lines, and give it the company's lowest free number."""
     _check_records(company, customer, lines)
     computed = [compute_line(line, customer.kind) for line in lines]
@@ -204,6 +205,7 @@ def create_invoice(*, company, customer, invoice_date, lines, your_reference="",
         invoice_date=invoice_date,
         your_reference=your_reference,
         created_by=user,
+        issued_offline=issued_offline,
         invoice_type=Invoice.Type.DEBIT_NOTE if original else Invoice.Type.SALE,
         original=original,
         invoice_ref_no=original.fbr_invoice_number if original else "",
@@ -214,7 +216,7 @@ def create_invoice(*, company, customer, invoice_date, lines, your_reference="",
 
 
 @transaction.atomic
-def update_invoice(invoice, *, customer, invoice_date, lines, your_reference="") -> Invoice:
+def update_invoice(invoice, *, customer, invoice_date, lines, your_reference="", issued_offline=False) -> Invoice:
     """Change an invoice that hasn't been approved. It keeps its number."""
     locked = Invoice.objects.select_for_update().select_related("company").get(pk=invoice.pk)
     if not locked.can_edit:
@@ -227,6 +229,7 @@ def update_invoice(invoice, *, customer, invoice_date, lines, your_reference="")
     for field, value in _invoice_fields(locked.company, customer, computed).items():
         setattr(locked, field, value)
     locked.invoice_date = invoice_date
+    locked.issued_offline = locked.issued_offline or issued_offline
     locked.approved_by = None
     locked.approved_at = None
     locked.last_error_code = ""

@@ -32,6 +32,7 @@
 </header>
 
 {% if invoice.can_approve or invoice.can_send %}<p class="sub mb-2">{% if fbr_mode == 'production' %}<strong>Production mode: this goes to FBR as a real invoice.</strong>{% else %}Sandbox mode: this goes to FBR as a test only.{% endif %}</p>{% endif %}
+{% if invoice.issued_offline %}<p class="export-note"><i class="bi bi-exclamation-triangle"></i> Issued in offline mode. {% if not invoice.fbr_invoice_number %}FBR's rule is to upload it within 24 hours of the connection returning.{% endif %}</p>{% endif %}
 {% if invoice.is_debit_note %}<p class="sub mb-2">Against invoice <a href="{% url 'invoice_detail' invoice.original_id %}">{{ invoice.original.number }}</a>, IRN {{ invoice.invoice_ref_no }}.</p>{% endif %}
 {% if invoice.status == 'saved' %}<p class="sub mb-2">Check the details below. You can still edit or delete it. Nothing goes to FBR until it's approved, and it's locked after that.</p>{% endif %}
 {% if invoice.status == 'waiting' %}<p class="sub mb-2">Approved{% if invoice.approved_by %} by {{ invoice.approved_by.username }}{% endif %}. Locked and waiting to send.</p>{% endif %}

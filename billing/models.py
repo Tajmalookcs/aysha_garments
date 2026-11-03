@@ -69,6 +69,8 @@ class Invoice(models.Model):
     scenario_id = models.CharField(max_length=5, blank=True)
     last_error_code = models.CharField(max_length=10, blank=True)
     last_error = models.TextField(blank=True)
+    # Rule 150XC: an invoice issued during a failure must be identified as offline.
+    issued_offline = models.BooleanField(default=False)
 
     total_excl_tax = models.DecimalField(max_digits=16, decimal_places=2, default=ZERO)
     total_sales_tax = models.DecimalField(max_digits=16, decimal_places=2, default=ZERO)

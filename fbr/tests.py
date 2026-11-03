@@ -159,6 +159,18 @@ class SendingTests(Base):
             inv.refresh_from_db()
             self.assertEqual(inv.status, "waiting", error)
 
+    def test_network_failure_marks_offline_but_refused_token_does_not(self, req):
+        req.side_effect = [requests.exceptions.ConnectTimeout()]
+        inv = self.approved()
+        send_invoice(inv)
+        inv.refresh_from_db()
+        self.assertTrue(inv.issued_offline)
+        req.side_effect = [reply(status=401, text="no")]
+        other = self.approved()
+        send_invoice(other)
+        other.refresh_from_db()
+        self.assertFalse(other.issued_offline)
+
     def test_token_refused_stays_waiting(self, req):
         req.side_effect = [reply(status=401, text="Unauthorized")]
         inv = self.approved()

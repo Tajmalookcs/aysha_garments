@@ -28,6 +28,7 @@ aysha_garments/
 ├── docs/
 │   ├── PROJECT_BRIEF.md    What we are building, and open questions
 │   ├── BUILD_PLANS.md      Plan and approval record for each build
+│   ├── PRAL_QUESTIONS.md   Questions to ask PRAL support
 │   └── 01 to 04            FBR rules, API, codes and draft data model
 ├── reference/              Official PRAL API specification
 └── media/                  Client documents; stays on the local computer, never pushed

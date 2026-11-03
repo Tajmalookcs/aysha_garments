@@ -19,6 +19,7 @@
   </div>
   <a class="btn btn-thread" href="{% url 'invoice_new' %}"><i class="bi bi-plus-lg"></i> New invoice</a>
 </header>
+{% if offline_count %}<p class="export-note"><i class="bi bi-exclamation-triangle"></i> {{ offline_count }} offline invoice{{ offline_count|pluralize }} still to send. FBR's rule is to upload them within 24 hours of the connection returning. The oldest was made {{ oldest_offline|timesince }} ago.</p>{% endif %}
 <dl class="today">
   <div><dt>Invoices today</dt><dd>{{ today_count }}</dd></div>
   <div><dt>Sales today</dt><dd>Rs {{ today_total|rupees }}</dd></div>

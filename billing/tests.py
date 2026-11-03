@@ -681,3 +681,53 @@ class CompanyNtnTests(TestCase):
         for value in ["1234567", "1111122222333"]:
             form = CustomerForm({**base, "ntn_cnic": value}, instance=Customer(company=self.company), company=self.company)
             self.assertIn("ntn_cnic", form.errors, value)
+
+
+class OfflineAndPrintRuleTests(TestCase):
+    def setUp(self):
+        self.company = make_company("A")
+        self.product = make_product(self.company)
+        self.customer = make_customer(self.company)
+        self.user = User.objects.create_user("owner", password="x")
+        Membership.objects.create(user=self.user, company=self.company, role="admin")
+        self.client.force_login(self.user)
+
+    def _lines(self):
+        return json.dumps([{"product": self.product.pk, "sold_by": "piece", "quantity": "1", "price": "100", "discount": "0"}])
+
+    def _post(self, offline="0"):
+        return self.client.post(reverse("invoice_new"), {"customer": self.customer.pk, "invoice_date": "2026-11-03", "lines": self._lines(), "issued_offline": offline})
+
+    def test_saved_while_offline_is_marked_everywhere(self):
+        self._post("1")
+        inv = Invoice.objects.get()
+        self.assertTrue(inv.issued_offline)
+        self.assertContains(self.client.get(reverse("invoice_print", args=[inv.pk])), "Issued in offline mode")
+        self.assertContains(self.client.get(reverse("invoice_detail", args=[inv.pk])), "Issued in offline mode")
+        self.assertContains(self.client.get(reverse("dashboard")), "1 offline invoice")
+
+    def test_online_invoice_has_no_offline_mark(self):
+        self._post("0")
+        inv = Invoice.objects.get()
+        self.assertFalse(inv.issued_offline)
+        self.assertNotContains(self.client.get(reverse("invoice_print", args=[inv.pk])), "Issued in offline mode")
+        self.assertNotContains(self.client.get(reverse("dashboard")), "offline invoice")
+
+    def test_edit_keeps_the_offline_mark(self):
+        self._post("1")
+        inv = Invoice.objects.get()
+        self.client.post(reverse("invoice_edit", args=[inv.pk]), {"customer": self.customer.pk, "invoice_date": "2026-11-03", "lines": self._lines(), "issued_offline": "0"})
+        inv.refresh_from_db()
+        self.assertTrue(inv.issued_offline)
+
+    def test_print_shows_tax_period_unit_and_sro(self):
+        Product.objects.filter(pk=self.product.pk).update(sro_schedule_no="SRO 297", sro_item_serial_no="12")
+        self._post()
+        page = self.client.get(reverse("invoice_print", args=[Invoice.objects.get().pk]))
+        self.assertContains(page, "November 2026")
+        self.assertContains(page, "Unit: Numbers, pieces, units")
+        self.assertContains(page, "SRO SRO 297, serial 12")
+
+    def test_print_leaves_out_sro_when_not_used(self):
+        self._post()
+        self.assertNotContains(self.client.get(reverse("invoice_print", args=[Invoice.objects.get().pk])), "serial")

@@ -33,6 +33,7 @@ def dashboard(request):
     invoices = request.company.invoices.all()
     today = timezone.localdate()
     waiting = invoices.filter(status=Invoice.Status.WAITING)
+    offline = invoices.filter(issued_offline=True, status__in=[Invoice.Status.SAVED, Invoice.Status.WAITING])
     stats = invoices.filter(invoice_date=today).aggregate(
         count=Count("id"),
         total=Sum("grand_total"),
@@ -43,6 +44,8 @@ def dashboard(request):
         "saved_count": invoices.filter(status=Invoice.Status.SAVED).count(),
         "waiting_count": waiting.count(),
         "oldest_waiting": waiting.aggregate(t=Min("created_at"))["t"],
+        "offline_count": offline.count(),
+        "oldest_offline": offline.aggregate(t=Min("created_at"))["t"],
         "held_count": invoices.filter(status=Invoice.Status.HELD).count(),
         "rejected_count": invoices.filter(status=Invoice.Status.REJECTED).count(),
         "today_count": stats["count"],
@@ -147,6 +150,7 @@ def _invoice_form(request, invoice=None, original=None):
                 "invoice_date": parse_date(selected_date),
                 "lines": _lines_from_post(request, products),
                 "your_reference": your_reference,
+                "issued_offline": request.POST.get("issued_offline") == "1",
             }
             if invoice:
                 saved = update_invoice(invoice, **details)
