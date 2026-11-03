@@ -439,7 +439,7 @@ class PrintTests(TestCase):
 
     def test_final_copy_has_a_25x25_qr_of_the_irn(self):
         from billing.qr import irn_matrix
-        for irn in ["7000007DI1747119701593", "3310205676519DI1747119701593"]:
+        for irn in ["7000007DI1747119701593", "1234567890123DI1747119701593"]:
             matrix = irn_matrix(irn)
             self.assertEqual((len(matrix), len(matrix[0])), (25, 25))
         inv = self._invoice()
