@@ -18,6 +18,7 @@ urlpatterns = [
     path("invoices/new/", billing.invoice_new, name="invoice_new"),
     path("invoices/<int:pk>/", billing.invoice_detail, name="invoice_detail"),
     path("invoices/<int:pk>/print/", billing.invoice_print, name="invoice_print"),
+    path("invoices/<int:pk>/debit-note/", billing.debit_note_new, name="debit_note_new"),
     path("invoices/<int:pk>/edit/", billing.invoice_edit, name="invoice_edit"),
     path("invoices/<int:pk>/delete/", billing.invoice_delete, name="invoice_delete"),
     path("invoices/<int:pk>/approve/", billing.invoice_approve, name="invoice_approve"),
@@ -33,6 +34,9 @@ urlpatterns = [
     path("fbr/download/", fbr.download_lists, name="fbr_download"),
     path("fbr/rates/", fbr.rate_lookup, name="fbr_rates"),
     path("fbr/log/<int:pk>/", fbr.log_detail, name="fbr_log"),
+    path("fbr/mode/", fbr.switch_mode, name="fbr_mode"),
+    path("fbr/lookups/", fbr.lookups, name="fbr_lookups"),
+    path("fbr/customers/<int:pk>/check/", fbr.check_customer, name="fbr_check_customer"),
 
     path("products/", core.product_list, name="product_list"),
     path("products/new/", core.product_edit, name="product_new"),

@@ -3,11 +3,12 @@
 {% block content %}
 <header class="page-head">
   <div>
-    <h2>Invoice {{ invoice.number }}</h2>
+    <h2>{% if invoice.is_debit_note %}Debit note{% else %}Invoice{% endif %} {{ invoice.number }}</h2>
     <p class="sub"><span class="status {{ invoice.status_class }}">{{ invoice.status_label }}</span></p>
   </div>
   <div class="invoice-actions">
     <a class="btn btn-outline-thread btn-lg" id="printLink" href="{% url 'invoice_print' invoice.pk %}">{% if invoice.is_final %}Print invoice{% else %}Print copy{% endif %}</a>
+    {% if invoice.can_add_debit_note %}<a class="btn btn-outline-thread btn-lg" id="debitNote" href="{% url 'debit_note_new' invoice.pk %}">Make debit note</a>{% endif %}
   {% if invoice.can_edit or invoice.can_send %}
     {% if invoice.can_edit %}
     <a class="btn btn-link" id="delete" href="{% url 'invoice_delete' invoice.pk %}">Delete</a>
@@ -30,6 +31,8 @@
   </div>
 </header>
 
+{% if invoice.can_approve or invoice.can_send %}<p class="sub mb-2">{% if fbr_mode == 'production' %}<strong>Production mode: this goes to FBR as a real invoice.</strong>{% else %}Sandbox mode: this goes to FBR as a test only.{% endif %}</p>{% endif %}
+{% if invoice.is_debit_note %}<p class="sub mb-2">Against invoice <a href="{% url 'invoice_detail' invoice.original_id %}">{{ invoice.original.number }}</a>, IRN {{ invoice.invoice_ref_no }}.</p>{% endif %}
 {% if invoice.status == 'saved' %}<p class="sub mb-2">Check the details below. You can still edit or delete it. Nothing goes to FBR until it's approved, and it's locked after that.</p>{% endif %}
 {% if invoice.status == 'waiting' %}<p class="sub mb-2">Approved{% if invoice.approved_by %} by {{ invoice.approved_by.username }}{% endif %}. Locked and waiting to send.</p>{% endif %}
 {% if invoice.last_error and invoice.status != 'check' %}<p class="flash error" role="alert">{{ invoice.last_error }}</p>{% endif %}

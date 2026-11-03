@@ -2,6 +2,16 @@
 
 POST_SANDBOX = "/di_data/v1/di/postinvoicedata_sb"
 VALIDATE_SANDBOX = "/di_data/v1/di/validateinvoicedata_sb"
+POST_PRODUCTION = "/di_data/v1/di/postinvoicedata"
+VALIDATE_PRODUCTION = "/di_data/v1/di/validateinvoicedata"
+POST_PATH = {"sandbox": POST_SANDBOX, "production": POST_PRODUCTION}
+VALIDATE_PATH = {"sandbox": VALIDATE_SANDBOX, "production": VALIDATE_PRODUCTION}
+
+SRO_SCHEDULE = "/pdi/v1/SroSchedule"
+HS_UOM = "/pdi/v2/HS_UOM"
+SRO_ITEM = "/pdi/v2/SROItem"
+STATL = "/dist/v1/statl"
+GET_REG_TYPE = "/dist/v1/Get_Reg_Type"
 
 # Lists downloaded whole: name, path, value key.
 REFERENCE_LISTS = {
@@ -57,6 +67,15 @@ ERROR_HELP = {
     "0053": "The buyer's registration type isn't valid.",
     "0058": "The buyer and seller can't have the same registration number.",
     "0079": "A 5% rate isn't allowed when the value is above 20,000.",
+    "0026": "This debit note needs the original invoice's IRN.",
+    "0029": "The debit note's date can't be before the original invoice's date.",
+    "0034": "A debit note is only allowed within 180 days of the original invoice.",
+    "0035": "The debit note's date can't be before the original invoice's date.",
+    "0067": "The debit note's sales tax can't be more than the original invoice's sales tax.",
+    "0099": "This unit isn't allowed for the product's HS code. Check it under FBR setup, Lookups.",
+    "0104": "The sales tax doesn't match the rate. Check the product's rate.",
+    "0106": "FBR says this buyer isn't registered for sales tax. Check the buyer's NTN or CNIC.",
+    "0107": "The buyer's registration number doesn't match FBR's record.",
     "0401": "FBR doesn't accept this token for the seller's NTN or CNIC. Check the company's NTN and the token.",
     "0402": "FBR doesn't accept the buyer's NTN or CNIC. Check it under Customers.",
 }

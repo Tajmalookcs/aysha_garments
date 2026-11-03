@@ -137,6 +137,21 @@ def _check_records(company, customer, lines):
             raise InvoiceError("Choose products from this company only.")
 
 
+def _check_debit_note(original, customer, invoice_date, computed):
+    """FBR's debit note rules, from errors 0026, 0029, 0034, 0035 and 0067."""
+    if not original.can_add_debit_note:
+        raise InvoiceError("A debit note needs an accepted sale invoice from the last 180 days.")
+    if customer.pk != original.customer_id:
+        raise InvoiceError("A debit note must be for the same buyer as the original invoice.")
+    if invoice_date < original.invoice_date:
+        raise InvoiceError("The debit note's date can't be before the original invoice's date.")
+    if (invoice_date - original.invoice_date).days > 180:
+        raise InvoiceError("A debit note is only allowed within 180 days of the original invoice.")
+    tax = sum((c["sales_tax"] for c in computed), Decimal("0.00"))
+    if tax > original.total_sales_tax:
+        raise InvoiceError("The debit note's sales tax can't be more than the original invoice's sales tax.")
+
+
 def _invoice_fields(company, customer, computed):
     """The details copied onto an invoice, so later edits elsewhere never change it."""
     zero = Decimal("0.00")
@@ -171,10 +186,12 @@ def _save_items(invoice, computed):
 
 
 @transaction.atomic
-def create_invoice(*, company, customer, invoice_date, lines, your_reference="", user=None) -> Invoice:
+def create_invoice(*, company, customer, invoice_date, lines, your_reference="", user=None, original=None) -> Invoice:
     """Save an invoice with its lines, and give it the company's lowest free number."""
     _check_records(company, customer, lines)
     computed = [compute_line(line, customer.kind) for line in lines]
+    if original is not None:
+        _check_debit_note(original, customer, invoice_date, computed)
 
     locked = Company.objects.select_for_update().get(pk=company.pk)
 
@@ -184,6 +201,9 @@ def create_invoice(*, company, customer, invoice_date, lines, your_reference="",
         invoice_date=invoice_date,
         your_reference=your_reference,
         created_by=user,
+        invoice_type=Invoice.Type.DEBIT_NOTE if original else Invoice.Type.SALE,
+        original=original,
+        invoice_ref_no=original.fbr_invoice_number if original else "",
         **_invoice_fields(locked, customer, computed),
     )
     _save_items(invoice, computed)
@@ -198,6 +218,8 @@ def update_invoice(invoice, *, customer, invoice_date, lines, your_reference="")
         raise InvoiceError(f"Invoice {locked.number} is approved, so it can't be changed.")
     _check_records(locked.company, customer, lines)
     computed = [compute_line(line, customer.kind) for line in lines]
+    if locked.original_id:
+        _check_debit_note(locked.original, customer, invoice_date, computed)
 
     for field, value in _invoice_fields(locked.company, customer, computed).items():
         setattr(locked, field, value)

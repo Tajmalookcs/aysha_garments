@@ -337,3 +337,135 @@ class ScreenTests(Base):
             self.assertEqual(self.client.post(reverse(name, args=[inv.pk])).status_code, 404, name)
         self.assertEqual(self.client.get(reverse("fbr_log", args=[entry.pk])).status_code, 404)
         req.assert_not_called()
+
+
+@patch("fbr.client.requests.request")
+class ProductionModeTests(Base):
+    def _production(self):
+        cred = FbrCredential(company=self.company, environment="production")
+        cred.token = "prod-token-abcdefgh"
+        cred.save()
+        self.company.fbr_mode = "production"
+        self.company.save()
+
+    def test_stays_in_sandbox_until_deliberately_switched(self, req):
+        self.client.post(reverse("fbr_mode"), {"mode": "production", "confirm": "yes"})
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.fbr_mode, "sandbox")
+        cred = FbrCredential(company=self.company, environment="production")
+        cred.token = "prod-token-abcdefgh"
+        cred.save()
+        self.client.post(reverse("fbr_mode"), {"mode": "production"})
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.fbr_mode, "sandbox")
+        self.client.post(reverse("fbr_mode"), {"mode": "production", "confirm": "yes"})
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.fbr_mode, "production")
+        self.client.post(reverse("fbr_mode"), {"mode": "sandbox"})
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.fbr_mode, "sandbox")
+
+    def test_production_send_uses_real_urls_and_no_scenario(self, req):
+        self._production()
+        req.side_effect = [reply(VALID_CHECK), reply(VALID_POST)]
+        inv = approve_invoice(self.invoice(), self.user, "")
+        self.assertTrue(send_invoice(inv).ok)
+        urls = [c.args[1] for c in req.call_args_list]
+        self.assertTrue(urls[0].endswith("/validateinvoicedata"))
+        self.assertTrue(urls[1].endswith("/postinvoicedata"))
+        self.assertEqual(req.call_args.kwargs["headers"]["Authorization"], "Bearer prod-token-abcdefgh")
+        self.assertNotIn("scenarioId", json.loads(req.call_args.kwargs["data"]))
+        inv.refresh_from_db()
+        self.assertTrue(inv.is_final)
+        page = self.client.get(reverse("invoice_print", args=[inv.pk]))
+        self.assertContains(page, "fbr-digital-invoicing.png")
+        self.assertContains(page, 'viewBox="0 0 25 25"')
+
+    def test_sandbox_send_uses_sandbox_token_even_with_production_saved(self, req):
+        cred = FbrCredential(company=self.company, environment="production")
+        cred.token = "prod-token-abcdefgh"
+        cred.save()
+        req.side_effect = [reply(VALID_CHECK), reply(VALID_POST)]
+        inv = self.approved()
+        send_invoice(inv)
+        self.assertEqual(req.call_args.kwargs["headers"]["Authorization"], f"Bearer {TOKEN}")
+        self.assertTrue(req.call_args.args[1].endswith("_sb"))
+        inv.refresh_from_db()
+        self.assertFalse(inv.is_final)
+
+    def test_demo_invoice_is_never_sent(self, req):
+        self._production()
+        inv = create_invoice(company=self.company, customer=self.reg, invoice_date=date(2026, 11, 2),
+                             lines=[LineInput(self.product, "piece", "1", "", "1000")], your_reference="DEMO order")
+        inv = approve_invoice(inv, self.user, "")
+        self.assertIn("demo", send_invoice(inv).message)
+        req.assert_not_called()
+
+    def test_debit_note_payload_is_sent_with_reference(self, req):
+        Invoice.objects.update()
+        original = self.invoice()
+        Invoice.objects.filter(pk=original.pk).update(status="accepted", fbr_invoice_number="7000007DI1", fbr_environment="sandbox", invoice_date=date.today())
+        original.refresh_from_db()
+        note = create_invoice(company=self.company, customer=self.reg, invoice_date=date.today(),
+                              lines=[LineInput(self.product, "piece", "1", "", "1000")], original=original)
+        note = approve_invoice(note, self.user, "SN001")
+        req.side_effect = [reply(VALID_CHECK), reply(VALID_POST)]
+        send_invoice(note)
+        sent = json.loads(req.call_args.kwargs["data"])
+        self.assertEqual((sent["invoiceType"], sent["invoiceRefNo"]), ("Debit Note", "7000007DI1"))
+
+
+@patch("fbr.client.requests.request")
+class LookupTests(Base):
+    def test_units_and_sro_calls_match_the_spec(self, req):
+        req.side_effect = [reply([{"uoM_ID": 77, "description": "Square Meter"}])]
+        page = self.client.get(reverse("fbr_lookups"), {"kind": "uom", "hs": "5904.9000", "an": "3"})
+        self.assertContains(page, "Square Meter")
+        self.assertEqual(req.call_args.kwargs["params"], {"hs_code": "5904.9000", "annexure_id": "3"})
+        self.assertTrue(req.call_args.args[1].endswith("/pdi/v2/HS_UOM"))
+        req.side_effect = [reply([{"srO_ID": 7, "srO_DESC": "Zero Rated Gas"}])]
+        page = self.client.get(reverse("fbr_lookups"), {"kind": "sro", "rate": "413", "pr": "7"})
+        self.assertContains(page, "Zero Rated Gas")
+        self.assertRegex(req.call_args.kwargs["params"]["date"], r"^\d{2}-[A-Z][a-z]{2}-\d{4}$")
+        req.side_effect = [reply([{"srO_ITEM_ID": 17853, "srO_ITEM_DESC": "50"}])]
+        page = self.client.get(reverse("fbr_lookups"), {"kind": "item", "sro": "389"})
+        self.assertContains(page, "17853")
+        self.assertRegex(req.call_args.kwargs["params"]["date"], r"^\d{4}-\d{2}-\d{2}$")
+
+    def test_failed_lookup_shows_a_message(self, req):
+        req.side_effect = [requests.exceptions.ConnectTimeout()]
+        self.assertContains(self.client.get(reverse("fbr_lookups"), {"kind": "uom", "hs": "1"}), "didn&#x27;t answer")
+
+    def test_customer_check_saves_fbr_answers(self, req):
+        req.side_effect = [reply({"statuscode": "00", "REGISTRATION_NO": "7654321", "REGISTRATION_TYPE": "Registered"}),
+                           reply({"status code": "00", "status": "Active"})]
+        self.client.post(reverse("fbr_check_customer", args=[self.reg.pk]))
+        self.reg.refresh_from_db()
+        self.assertEqual((self.reg.fbr_reg_type, self.reg.fbr_status), ("Registered", "Active"))
+        self.assertFalse(self.reg.fbr_mismatch)
+        self.assertEqual(json.loads(req.call_args_list[0].kwargs["data"]), {"Registration_No": "7654321"})
+        self.assertEqual(json.loads(req.call_args_list[1].kwargs["data"])["regno"], "7654321")
+        self.assertContains(self.client.get(reverse("customer_list")), "Registered, Active")
+
+    def test_mismatch_warns(self, req):
+        req.side_effect = [reply({"statuscode": "01", "REGISTRATION_NO": "7654321", "REGISTRATION_TYPE": "unregistered"}),
+                           reply({"status code": "01", "status": "In-Active"})]
+        response = self.client.post(reverse("fbr_check_customer", args=[self.reg.pk]), follow=True)
+        self.assertContains(response, "doesn&#x27;t match")
+        self.reg.refresh_from_db()
+        self.assertTrue(self.reg.fbr_mismatch)
+
+    def test_get_refused_falls_back_to_post(self, req):
+        req.side_effect = [reply(status=405, text="no"), reply({"REGISTRATION_TYPE": "Registered"}),
+                           reply(status=405, text="no"), reply({"status": "Active"})]
+        self.client.post(reverse("fbr_check_customer", args=[self.reg.pk]))
+        self.assertEqual([c.args[0] for c in req.call_args_list], ["GET", "POST", "GET", "POST"])
+
+    def test_network_failure_changes_nothing_and_other_company_blocked(self, req):
+        req.side_effect = [requests.exceptions.ConnectTimeout(), requests.exceptions.ConnectTimeout()]
+        self.client.post(reverse("fbr_check_customer", args=[self.reg.pk]))
+        self.reg.refresh_from_db()
+        self.assertIsNone(self.reg.fbr_checked_at)
+        other = Company.objects.create(business_name="OTHER", ntn_cnic="7777777", province="P", address="A", invoice_prefix="OO")
+        customer = Customer.objects.create(company=other, name="B", kind="registered", ntn_cnic="1111111", province="P", address="A")
+        self.assertEqual(self.client.post(reverse("fbr_check_customer", args=[customer.pk])).status_code, 404)

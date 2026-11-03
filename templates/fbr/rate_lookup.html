@@ -11,7 +11,7 @@
   <div class="col-md-3 d-flex align-items-end"><button class="btn btn-thread w-100" type="submit">Find rates</button></div>
 </form>
 {% if rates is not None %}
-  {% if rates %}<div class="table-responsive"><table class="table ledger"><thead><tr><th>Rate as FBR writes it</th><th class="text-end">Value</th></tr></thead><tbody>{% for r in rates %}<tr><td>{{ r.desc }}</td><td class="text-end num">{{ r.value }}</td></tr>{% endfor %}</tbody></table></div>
+  {% if rates %}<div class="table-responsive"><table class="table ledger"><thead><tr><th>Rate ID</th><th>Rate as FBR writes it</th><th class="text-end">Value</th></tr></thead><tbody>{% for r in rates %}<tr><td>{{ r.id }}</td><td>{{ r.desc }}</td><td class="text-end num">{{ r.value }}</td></tr>{% endfor %}</tbody></table></div>
   {% else %}<div class="empty"><p class="mb-0">FBR returned no rates for this choice.</p></div>{% endif %}
 {% endif %}
 {% endif %}

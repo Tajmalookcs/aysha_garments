@@ -35,6 +35,7 @@ class Company(models.Model):
         help_text="Invoice numbers will look like AG-000001.",
     )
     sandbox_scenarios = models.CharField(max_length=200, blank=True)
+    fbr_mode = models.CharField(max_length=10, default="sandbox", editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -124,6 +125,10 @@ class Customer(models.Model):
     address = models.TextField(blank=True)
     phone = models.CharField(max_length=60, blank=True)
     is_active = models.BooleanField("Available on new invoices", default=True)
+    # FBR's latest answers about this buyer, kept for offline use.
+    fbr_reg_type = models.CharField(max_length=30, blank=True, editable=False)
+    fbr_status = models.CharField(max_length=30, blank=True, editable=False)
+    fbr_checked_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ["name"]
@@ -131,3 +136,13 @@ class Customer(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def fbr_mismatch(self):
+        """True when FBR's answer disagrees with the buyer type saved here."""
+        answer = self.fbr_reg_type.strip().lower()
+        if answer == "registered":
+            return self.kind != self.Kind.REGISTERED
+        if answer == "unregistered":
+            return self.kind == self.Kind.REGISTERED
+        return False

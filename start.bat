@@ -14,12 +14,12 @@ pause
 exit /b 1
 
 :check_packages
-venv\Scripts\python.exe -c "import django, whitenoise, waitress, requests, cryptography" >nul 2>&1
+venv\Scripts\python.exe -c "import django, whitenoise, waitress, requests, cryptography, qrcode" >nul 2>&1
 if not errorlevel 1 goto prepare
 echo Installing the packages. This needs internet and takes a few minutes.
 venv\Scripts\python.exe -m pip install -r requirements.txt
 if errorlevel 1 goto install_failed
-venv\Scripts\python.exe -c "import django, whitenoise, waitress, requests, cryptography" >nul 2>&1
+venv\Scripts\python.exe -c "import django, whitenoise, waitress, requests, cryptography, qrcode" >nul 2>&1
 if not errorlevel 1 goto prepare
 
 :install_failed

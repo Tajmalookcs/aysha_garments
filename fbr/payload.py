@@ -8,15 +8,15 @@ def _n(value) -> float:
     return float(Decimal(value))
 
 
-def build_payload(invoice, scenario_id: str) -> dict:
-    """Sandbox payload. scenarioId must be left out in production.
+def build_payload(invoice, scenario_id: str = "") -> dict:
+    """The invoice JSON. scenarioId is sandbox only, so it's left out in production.
 
     To confirm in sandbox: the spec doesn't say whether valueSalesExcludingST is before or
     after discount. It's sent after discount, the same base the tax is worked out on.
     extraTax is an empty string, as in the sample shown in IRIS.
     """
-    return {
-        "invoiceType": "Sale Invoice",
+    data = {
+        "invoiceType": invoice.invoice_type,
         "invoiceDate": invoice.invoice_date.isoformat(),
         "sellerNTNCNIC": invoice.seller_ntn_cnic,
         "sellerBusinessName": invoice.seller_name,
@@ -27,8 +27,7 @@ def build_payload(invoice, scenario_id: str) -> dict:
         "buyerProvince": invoice.buyer_province,
         "buyerAddress": invoice.buyer_address,
         "buyerRegistrationType": "Registered" if invoice.buyer_kind == "registered" else "Unregistered",
-        "invoiceRefNo": "",
-        "scenarioId": scenario_id,
+        "invoiceRefNo": invoice.invoice_ref_no,
         "items": [
             {
                 "hsCode": item.hs_code,
@@ -52,3 +51,6 @@ def build_payload(invoice, scenario_id: str) -> dict:
             for item in invoice.items.all()
         ],
     }
+    if scenario_id:
+        data["scenarioId"] = scenario_id
+    return data

@@ -12,6 +12,7 @@ class FbrCredential(models.Model):
 
     class Environment(models.TextChoices):
         SANDBOX = "sandbox", "Sandbox"
+        PRODUCTION = "production", "Production"
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="fbr_credentials")
     environment = models.CharField(max_length=10, choices=Environment.choices, default=Environment.SANDBOX)

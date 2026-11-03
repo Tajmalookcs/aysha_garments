@@ -20,10 +20,11 @@
       <p>NTN or CNIC {{ invoice.seller_ntn_cnic }}{% if invoice.seller_strn %} &nbsp; STRN {{ invoice.seller_strn }}{% endif %}</p>
     </div>
     <div class="title">
-      <h2>Sales Tax Invoice</h2>
+      <h2>{% if invoice.is_debit_note %}Debit Note{% else %}Sales Tax Invoice{% endif %}</h2>
       <dl>
-        <div><dt>Invoice no.</dt><dd>{{ invoice.number }}</dd></div>
+        <div><dt>{% if invoice.is_debit_note %}Note no.{% else %}Invoice no.{% endif %}</dt><dd>{{ invoice.number }}</dd></div>
         <div><dt>Date</dt><dd>{{ invoice.invoice_date|date:"d M Y" }}</dd></div>
+        {% if invoice.is_debit_note %}<div><dt>Original IRN</dt><dd>{{ invoice.invoice_ref_no }}</dd></div>{% endif %}
         {% if invoice.your_reference %}<div><dt>Your reference</dt><dd>{{ invoice.your_reference }}</dd></div>{% endif %}
       </dl>
     </div>
@@ -73,7 +74,7 @@
   {% if copy.kind == 'final' %}
   <section class="fbr">
     <img src="{% static 'img/fbr-digital-invoicing.png' %}" alt="FBR Digital Invoicing System logo">
-    <div class="qr">QR content not confirmed yet</div>
+    {% if qr_svg %}<div class="qr-code">{{ qr_svg }}</div>{% else %}<div class="qr qr-error">QR code could not be made. Don't issue this invoice.</div>{% endif %}
     <div class="irn"><small>FBR invoice number (IRN)</small><b>{{ invoice.fbr_invoice_number }}</b>{% if invoice.fbr_dated %}<small>Dated {{ invoice.fbr_dated }}</small>{% endif %}</div>
   </section>
   {% else %}

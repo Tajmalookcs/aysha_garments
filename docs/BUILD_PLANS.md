@@ -95,10 +95,10 @@ A4 invoice printing that can never pass off an unaccepted invoice as final.
 Print screen with Pending FBR, Sandbox test and final copies, amount in words, and a further tax column only when needed.
 
 ### Decisions needed
-- What goes inside the QR code. The spec doesn't say, and its sample QR is only a third-party link.
+None.
 
 ### Outcome
-The final copy has the FBR logo, IRN and an empty QR box. It only appears after production acceptance, which isn't built yet.
+The final copy has the FBR logo, the IRN and a version 2.0 (25x25) QR code at 1x1 inch holding the IRN, as confirmed by the owner. It only appears after production acceptance, which isn't built yet.
 
 ## Build B: Sales register and backup
 
@@ -117,8 +117,31 @@ Help reconcile the monthly return, and protect the data.
 ### Outcome
 Built and tested. The register totals show a warning when they include invoices not accepted in production.
 
+## Build C: Features from the FBR documents
+
+Status: Done locally on 2026-11-03. Not pushed yet, and not yet tested against FBR.
+Date proposed: 2026-11-03
+Date approved: 2026-11-03
+
+### Goal
+Support what the PRAL spec v1.12 and User Manual v1.5 require.
+
+### Work
+- QR code on the final copy: version 2.0 (25x25) at 1x1 inch, holding the IRN as confirmed by the owner. The documents don't state the content.
+- Lookups: units for an HS code, SRO schedules and SRO items.
+- Buyer checks: registration type and active status.
+- Debit notes against accepted invoices, with FBR's 180-day and sales tax limits.
+- Production mode: separate token, real URLs and no scenario ID. It needs a deliberate switch.
+
+### Decisions needed
+- Errors 0027 and 0028 mention a reason for debit notes, but the spec has no field for it. Confirm in sandbox.
+- The spec names STATL and Get_Reg_Type as GET with a JSON body. POST is tried if GET is refused.
+- Credit notes appear only in error messages, so they aren't built. Ask PRAL.
+
+### Outcome
+Built and tested against the spec's samples and a fake local server.
+
 ## Later builds (not approved yet)
 
 3. Run the sandbox scenarios from the whitelisted computer.
-5. Reliability: offline queue, sales register, backups.
-6. Go live: production token, first real invoice, training.
+6. Go live: first real invoice, training.

@@ -1,0 +1,2 @@
+{% if rows %}<div class="table-responsive mb-3"><table class="table ledger"><thead><tr><th>ID</th><th>Description</th></tr></thead><tbody>{% for r in rows %}<tr><td>{{ r.id }}</td><td class="wrap">{{ r.desc }}</td></tr>{% endfor %}</tbody></table></div>
+{% elif asked %}<div class="empty mb-3"><p class="mb-0">FBR returned nothing for this search.</p></div>{% endif %}

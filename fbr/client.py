@@ -27,15 +27,16 @@ class Result:
     network_error: str = ""
 
 
-def sandbox_token(company) -> str:
-    credential = FbrCredential.objects.filter(company=company, environment="sandbox").first()
+def token_for(company) -> str:
+    """The token for the company's current mode. Sandbox unless production was switched on."""
+    credential = FbrCredential.objects.filter(company=company, environment=company.fbr_mode).first()
     if credential is None:
-        raise NoToken("Add the sandbox token in FBR setup first.")
+        raise NoToken(f"Add the {company.fbr_mode} token in FBR setup first.")
     return credential.token
 
 
 def call(company, method, path, *, payload=None, params=None, invoice=None) -> Result:
-    token = sandbox_token(company)
+    token = token_for(company)
     body = json.dumps(payload) if payload is not None else None
     url = settings.FBR_BASE_URL + path
     started = time.monotonic()

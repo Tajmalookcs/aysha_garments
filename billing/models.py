@@ -10,6 +10,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from core.models import Company, Customer, Product
 
@@ -26,7 +27,14 @@ class Invoice(models.Model):
         REJECTED = "rejected", "Rejected by FBR"
 
     company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="invoices")
+    class Type(models.TextChoices):
+        SALE = "Sale Invoice", "Sale Invoice"
+        DEBIT_NOTE = "Debit Note", "Debit Note"
+
     number = models.CharField(max_length=30)
+    invoice_type = models.CharField(max_length=15, choices=Type.choices, default=Type.SALE)
+    original = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="debit_notes")
+    invoice_ref_no = models.CharField("Original IRN", max_length=40, blank=True)
     local_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     invoice_date = models.DateField()
     your_reference = models.CharField(max_length=100, blank=True)
@@ -114,6 +122,19 @@ class Invoice(models.Model):
         if self.status == self.Status.REJECTED and self.your_reference.startswith("DEMO"):
             return "Rejected (demo only)"
         return self.get_status_display()
+
+    @property
+    def is_debit_note(self):
+        return self.invoice_type == self.Type.DEBIT_NOTE
+
+    @property
+    def can_add_debit_note(self):
+        """A sale invoice with a real or sandbox IRN, within FBR's 180 days (error 0034)."""
+        if self.invoice_type != self.Type.SALE or self.status != self.Status.ACCEPTED:
+            return False
+        if self.fbr_environment not in ("sandbox", "production") or not self.fbr_invoice_number:
+            return False
+        return (timezone.localdate() - self.invoice_date).days <= 180
 
     @property
     def can_edit(self):

@@ -37,7 +37,7 @@
       {% if is_admin %}
       <a class="nav-item {% if n == 'product_list' or n == 'product_new' or n == 'product_edit' %}is-active{% endif %}" href="{% url 'product_list' %}"><i class="bi bi-box-seam"></i>Products</a>
       <a class="nav-item {% if n == 'company_edit' or n == 'company_new' %}is-active{% endif %}" href="{% url 'company_edit' %}"><i class="bi bi-building"></i>Company</a>
-      <a class="nav-item {% if n == 'fbr_setup' or n == 'fbr_rates' or n == 'fbr_log' %}is-active{% endif %}" href="{% url 'fbr_setup' %}"><i class="bi bi-shield-check"></i>FBR setup</a>
+      <a class="nav-item {% if n == 'fbr_setup' or n == 'fbr_rates' or n == 'fbr_log' or n == 'fbr_lookups' %}is-active{% endif %}" href="{% url 'fbr_setup' %}"><i class="bi bi-shield-check"></i>FBR setup</a>
       {% endif %}
       {% endwith %}
     </nav>

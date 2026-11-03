@@ -7,10 +7,10 @@
 </header>
 {% if customers %}
 <div class="table-responsive"><table class="table ledger align-middle">
-  <thead><tr><th>Customer</th><th>Buyer type</th><th>NTN or CNIC</th><th>Province or country</th><th>Available</th></tr></thead>
+  <thead><tr><th>Customer</th><th>Buyer type</th><th>NTN or CNIC</th><th>Province or country</th><th>FBR check</th><th>Available</th></tr></thead>
   <tbody>{% for c in customers %}<tr>
     <td><a href="{% url 'customer_edit' c.pk %}">{{ c.name }}</a></td><td>{{ c.get_kind_display }}</td><td>{{ c.ntn_cnic|default:"Not needed" }}</td>
-    <td>{% if c.country %}{{ c.country }}{% else %}{{ c.province }}{% endif %}</td><td>{{ c.is_active|yesno:"Yes,No" }}</td>
+    <td>{% if c.country %}{{ c.country }}{% else %}{{ c.province }}{% endif %}</td><td>{% if c.fbr_checked_at %}<span class="status {% if c.fbr_mismatch %}bad{% else %}ok{% endif %}">{{ c.fbr_reg_type|default:"-" }}, {{ c.fbr_status|default:"-" }}</span><div class="sub small">{{ c.fbr_checked_at|date:"d M Y" }}</div>{% endif %}{% if c.ntn_cnic %}<form method="post" action="{% url 'fbr_check_customer' c.pk %}" data-loading="Asking FBR">{% csrf_token %}<button class="btn btn-link p-0" type="submit">Check with FBR</button></form>{% endif %}</td><td>{{ c.is_active|yesno:"Yes,No" }}</td>
   </tr>{% endfor %}</tbody>
 </table></div>
 {% else %}

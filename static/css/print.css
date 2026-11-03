@@ -34,6 +34,9 @@ small { color: #555C7D; }
 .fbr { display: flex; align-items: center; gap: 6mm; margin-top: 9mm; padding-top: 5mm; border-top: 1.5pt dashed #C98A12; break-inside: avoid; }
 .fbr img { height: 25.4mm; }
 .qr { width: 25.4mm; height: 25.4mm; flex-shrink: 0; border: 1pt dashed #555C7D; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 8pt; color: #555C7D; padding: 1mm; }
+.qr-code { width: 25.4mm; height: 25.4mm; flex-shrink: 0; margin: 2mm; }
+.qr-code svg { display: block; width: 25.4mm; height: 25.4mm; }
+.qr-error { border-color: #8c1b2f; color: #8c1b2f; font-weight: 700; }
 .irn { display: flex; flex-direction: column; } .irn b { font-size: 12pt; word-break: break-all; }
 .nofbr p { margin: 0 0 0 auto; max-width: 70mm; color: #555C7D; font-size: 9pt; text-align: right; }
 footer { margin-top: 22mm; break-inside: avoid; }

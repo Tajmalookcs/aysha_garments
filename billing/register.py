@@ -9,7 +9,7 @@ from django.http import HttpResponse
 from .models import Invoice
 
 HEADERS = [
-    "Invoice no.", "Date", "Buyer", "Buyer type", "NTN or CNIC", "Province or country",
+    "Document", "Invoice no.", "Date", "Buyer", "Buyer type", "NTN or CNIC", "Province or country",
     "Value before discount", "Discount", "Value after discount", "Sales tax", "Further tax", "FED",
     "Total", "IRN", "FBR status",
 ]
@@ -60,13 +60,13 @@ def csv_response(invoices, start, end):
     writer.writerow(HEADERS)
     for i in invoices:
         writer.writerow([
-            _safe(i.number), i.invoice_date.isoformat(), _safe(i.buyer_name), i.get_buyer_kind_display(),
+            i.invoice_type, _safe(i.number), i.invoice_date.isoformat(), _safe(i.buyer_name), i.get_buyer_kind_display(),
             _safe(i.buyer_ntn_cnic), _safe(i.buyer_country or i.buyer_province),
             i.total_excl_tax, i.total_discount, i.total_excl_tax - i.total_discount,
             i.total_sales_tax, i.total_further_tax, i.total_fed, i.grand_total,
             _safe(i.fbr_invoice_number), i.status_label,
         ])
     t = totals(invoices)
-    writer.writerow(["Total", "", f"{t['count']} invoices", "", "", "", t["total_excl_tax"], t["total_discount"],
+    writer.writerow(["Total", "", "", f"{t['count']} invoices", "", "", "", t["total_excl_tax"], t["total_discount"],
                      t["after_discount"], t["total_sales_tax"], t["total_further_tax"], t["total_fed"], t["grand_total"], "", ""])
     return response

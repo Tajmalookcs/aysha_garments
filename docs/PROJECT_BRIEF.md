@@ -10,7 +10,9 @@
 - Offline: all design assets are stored locally; invoices are saved locally and uploaded when internet returns
 - Design: new look, with animated login and loading screens
 - Printing and users: A4, one computer (assumed, owner agreed)
+- Client's connection: a static IP, confirmed with the provider
 - Client computer: the client will get a new PC or upgrade Windows before installation
+- QR code: holds the IRN given by FBR (confirmed by the owner)
 - Invoice flow: save locally first, edit or delete if needed, then an Approve and send button releases it to FBR and locks it
 - Users: one person uses the app and approves invoices
 - Tax: worked out after discount
@@ -28,8 +30,6 @@
 ## Open questions
 
 1. How is a foreign buyer reported to FBR? Export invoices must not be treated as ready until this is confirmed.
-2. What goes inside the QR code? The spec does not say, and its sample QR is only a third-party link.
-3. Product list with HS codes, units, prices and tax rates, from the client.
-4. The client's STRN.
-5. How is a discount reported to FBR? The spec has a discount field but doesn't say whether the value sent is before or after it.
-6. Is a static IP available? It's needed for reliable daily use.
+2. Product list with HS codes, units, prices and tax rates, from the client.
+3. How is a discount reported to FBR? The spec has a discount field but doesn't say whether the value sent is before or after it.
+4. Are credit notes supported? The spec lists only Sale Invoice and Debit Note, but its errors mention credit notes.

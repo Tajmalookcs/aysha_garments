@@ -1,8 +1,9 @@
 {% extends "base.html" %}{% load static %}
-{% block title %}{% if invoice %}Edit invoice {{ invoice.number }}{% else %}New invoice{% endif %}{% endblock %}
+{% block title %}{% if invoice %}Edit {{ invoice.number }}{% elif original %}New debit note{% else %}New invoice{% endif %}{% endblock %}
 {% block content %}
 <header class="page-head">
-  {% if invoice %}<div><h2>Edit invoice {{ invoice.number }}</h2><p class="sub">Save your changes, then approve it to send it to FBR.</p></div>
+  {% if original %}<div><h2>{% if invoice %}Edit debit note {{ invoice.number }}{% else %}New debit note{% endif %}</h2><p class="sub">Against invoice {{ original.number }}, IRN {{ original.fbr_invoice_number }}. Enter the items and amounts for this note, within 180 days of the original.</p></div>
+  {% elif invoice %}<div><h2>Edit invoice {{ invoice.number }}</h2><p class="sub">Save your changes, then approve it to send it to FBR.</p></div>
   {% else %}<div><h2>New invoice</h2><p class="sub">Invoice {{ next_number }}. Save it here first, then approve it to send it to FBR.</p></div>{% endif %}
 </header>
 {% if not has_products or not customers %}
@@ -38,7 +39,7 @@
       <div><dt>Further tax</dt><dd id="tFT"></dd></div>
     </dl>
     <p class="grand"><span>Total</span><strong id="tGrand"></strong></p>
-    <button class="btn btn-thread btn-lg w-100" id="save" type="submit">{% if invoice %}Save changes{% else %}Save invoice{% endif %}</button>
+    <button class="btn btn-thread btn-lg w-100" id="save" type="submit">{% if invoice %}Save changes{% elif original %}Save debit note{% else %}Save invoice{% endif %}</button>
     <ol class="track" aria-label="What happens next">
       <li>Saved on this computer</li>
       <li>Approved by you</li>

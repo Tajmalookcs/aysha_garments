@@ -14,6 +14,7 @@ from fbr.views import assigned_scenarios
 
 from .models import Invoice
 from . import register
+from .qr import irn_svg
 from .words import amount_in_words
 from .services import (
     InvoiceError,
@@ -94,32 +95,40 @@ def _lines_from_post(request, products):
     return lines
 
 
-def _invoice_form(request, invoice=None):
-    """The new invoice and edit invoice screen."""
+def _lines_from_invoice(invoice):
+    return [
+        {
+            "product": item.product_id,
+            "sold_by": item.sold_by,
+            "quantity": f"{item.entered_quantity.normalize():f}",
+            "pieces_per_lot": item.pieces_per_lot or "",
+            "price": str(item.price_per_piece),
+            "discount": str(item.discount),
+        }
+        for item in invoice.items.all()
+    ]
+
+
+def _invoice_form(request, invoice=None, original=None):
+    """The new invoice, edit invoice and new debit note screen."""
     company = request.company
     products = company.products.filter(is_active=True)
     customers = company.customers.filter(is_active=True)
     initial_lines = []
     selected_customer = selected_date = your_reference = ""
+    source = invoice or original
 
-    if invoice:
+    if source:
         # Keep records already on this invoice, even if they've since been made unavailable.
-        products = company.products.filter(Q(is_active=True) | Q(pk__in=invoice.items.values("product"))).distinct()
-        customers = company.customers.filter(Q(is_active=True) | Q(pk=invoice.customer_id))
-        initial_lines = [
-            {
-                "product": item.product_id,
-                "sold_by": item.sold_by,
-                "quantity": f"{item.entered_quantity.normalize():f}",
-                "pieces_per_lot": item.pieces_per_lot or "",
-                "price": str(item.price_per_piece),
-                "discount": str(item.discount),
-            }
-            for item in invoice.items.all()
-        ]
-        selected_customer = str(invoice.customer_id)
+        products = company.products.filter(Q(is_active=True) | Q(pk__in=source.items.values("product"))).distinct()
+        customers = company.customers.filter(Q(is_active=True) | Q(pk=source.customer_id))
+        initial_lines = _lines_from_invoice(source)
+        selected_customer = str(source.customer_id)
+    if invoice:
         selected_date = invoice.invoice_date.isoformat()
         your_reference = invoice.your_reference
+    if original or (invoice and invoice.original_id):
+        customers = company.customers.filter(pk=source.customer_id)
 
     if request.method == "POST":
         selected_customer = request.POST.get("customer", "")
@@ -143,7 +152,7 @@ def _invoice_form(request, invoice=None):
                 saved = update_invoice(invoice, **details)
                 messages.success(request, f"Invoice {saved.number} updated. Approve it to send it to FBR.")
             else:
-                saved = create_invoice(company=company, user=request.user, **details)
+                saved = create_invoice(company=company, user=request.user, original=original, **details)
                 messages.success(request, f"Invoice {saved.number} saved on this computer. Approve it to send it to FBR.")
         except (InvoiceError, ValueError) as exc:
             messages.error(request, str(exc))
@@ -152,6 +161,7 @@ def _invoice_form(request, invoice=None):
 
     return render(request, "billing/invoice_form.html", {
         "invoice": invoice,
+        "original": original or (invoice.original if invoice else None),
         "customers": customers,
         "has_products": products.exists(),
         "next_number": next_invoice_number(company),
@@ -182,6 +192,15 @@ def invoice_new(request):
 
 
 @company_required
+def debit_note_new(request, pk):
+    original = get_object_or_404(request.company.invoices.prefetch_related("items"), pk=pk)
+    if not original.can_add_debit_note:
+        messages.error(request, "A debit note needs an accepted sale invoice from the last 180 days.")
+        return redirect("invoice_detail", pk=original.pk)
+    return _invoice_form(request, original=original)
+
+
+@company_required
 def invoice_edit(request, pk):
     invoice = get_object_or_404(request.company.invoices.prefetch_related("items"), pk=pk)
     if not invoice.can_edit:
@@ -206,12 +225,13 @@ def invoice_delete(request, pk):
 @company_required
 def invoice_detail(request, pk):
     invoice = get_object_or_404(request.company.invoices.prefetch_related("items"), pk=pk)
-    scenarios = assigned_scenarios(request.company)
+    scenarios = assigned_scenarios(request.company) if request.company.fbr_mode == "sandbox" else []
     suggested = invoice.scenario_id or {"registered": "SN001", "unregistered": "SN002"}.get(invoice.buyer_kind, "")
     return render(request, "billing/invoice_detail.html", {
         "invoice": invoice,
         "scenarios": scenarios,
         "suggested": suggested,
+        "fbr_mode": request.company.fbr_mode,
     })
 
 
@@ -255,6 +275,7 @@ def invoice_print(request, pk):
         "invoice": invoice,
         "items": invoice.items.all(),
         "copy": invoice.print_copy,
+        "qr_svg": irn_svg(invoice.fbr_invoice_number) if invoice.is_final else None,
         "words": amount_in_words(invoice.grand_total),
         "after_discount": invoice.total_excl_tax - invoice.total_discount,
     })

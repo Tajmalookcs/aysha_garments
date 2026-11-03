@@ -28,7 +28,7 @@
 <div class="table-responsive"><table class="table ledger align-middle">
   <thead><tr><th>Invoice and FBR status</th><th>Date</th><th>Buyer</th><th>NTN or CNIC</th><th class="text-end">Value</th><th class="text-end">Discount</th><th class="text-end">Sales tax</th><th class="text-end">Further tax</th><th class="text-end">FED</th><th class="text-end">Total</th></tr></thead>
   <tbody>{% for i in invoices %}<tr>
-    <td><a href="{% url 'invoice_detail' i.pk %}">{{ i.number }}</a><div class="small"><span class="status {{ i.status_class }}">{{ i.status_label }}</span></div>{% if i.fbr_invoice_number %}<div class="sub small">IRN {{ i.fbr_invoice_number }}</div>{% endif %}</td><td>{{ i.invoice_date|date:"d M Y" }}</td>
+    <td><a href="{% url 'invoice_detail' i.pk %}">{{ i.number }}</a>{% if i.is_debit_note %}<div class="sub small">Debit note</div>{% endif %}<div class="small"><span class="status {{ i.status_class }}">{{ i.status_label }}</span></div>{% if i.fbr_invoice_number %}<div class="sub small">IRN {{ i.fbr_invoice_number }}</div>{% endif %}</td><td>{{ i.invoice_date|date:"d M Y" }}</td>
     <td>{{ i.buyer_name }}<div class="sub small">{{ i.get_buyer_kind_display }}</div></td><td>{{ i.buyer_ntn_cnic|default:"-" }}</td>
     <td class="text-end num">{{ i.total_excl_tax|rupees }}</td><td class="text-end num">{{ i.total_discount|rupees }}</td><td class="text-end num">{{ i.total_sales_tax|rupees }}</td><td class="text-end num">{{ i.total_further_tax|rupees }}</td><td class="text-end num">{{ i.total_fed|rupees }}</td><td class="text-end num"><b>{{ i.grand_total|rupees }}</b></td>
   </tr>{% endfor %}</tbody>

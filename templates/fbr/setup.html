@@ -2,13 +2,14 @@
 {% block title %}FBR setup{% endblock %}
 {% block content %}
 <header class="page-head">
-  <div><h2>FBR setup</h2><p class="sub">Sandbox only for now. Invoices sent from here are tests, not real invoices.</p></div>
+  <div><h2>FBR setup</h2><p class="sub">{% if company.fbr_mode == 'production' %}<strong>Production mode is on. Invoices you send are real.</strong>{% else %}Sandbox mode is on. Invoices you send are tests, not real invoices.{% endif %}</p></div>
 </header>
 
 <h3 class="section-title">Sandbox token</h3>
 <p class="sub mb-2">{% if credential %}A token is saved and encrypted (updated {{ credential.updated_at|date:"d M Y, H:i" }}). It's never shown again. Paste a new one only to replace it.{% else %}Copy the token from IRIS, under Digital Invoicing, Sandbox Environment, View Web API Environment Details.{% endif %}</p>
 <form method="post" action="{% url 'fbr_save_token' %}" class="row g-2 mb-2 setup-row" data-loading="Saving the token">
   {% csrf_token %}
+  <input type="hidden" name="environment" value="sandbox">
   <div class="col-md-8"><label class="visually-hidden" for="token">Sandbox token</label><input class="form-control" id="token" name="token" type="password" autocomplete="off" placeholder="Paste the sandbox token"></div>
   <div class="col-md-4"><button class="btn btn-thread w-100" id="saveToken" type="submit">Save token</button></div>
 </form>
@@ -16,6 +17,7 @@
   <form method="post" action="{% url 'fbr_test' %}" data-loading="Connecting to FBR">{% csrf_token %}<button class="btn btn-outline-thread" id="testConn" type="submit" {% if not credential %}disabled{% endif %}>Test connection</button></form>
   <form method="post" action="{% url 'fbr_download' %}" data-loading="Downloading FBR's lists">{% csrf_token %}<button class="btn btn-outline-thread" id="download" type="submit" {% if not credential %}disabled{% endif %}>Download FBR lists</button></form>
   <a class="btn btn-link" href="{% url 'fbr_rates' %}">Find tax rates</a>
+  <a class="btn btn-link" id="lookups" href="{% url 'fbr_lookups' %}">Lookups</a>
 </div>
 
 <h3 class="section-title">Sandbox scenarios</h3>
@@ -35,6 +37,25 @@
   </tr>{% endfor %}</tbody>
 </table></div>
 {% endif %}
+
+<h3 class="section-title">Going live</h3>
+<p class="sub mb-2">{% if production_credential %}A production token is saved and encrypted (updated {{ production_credential.updated_at|date:"d M Y, H:i" }}).{% else %}FBR issues the production token in IRIS once every scenario above is accepted. Find it under Production Environment, View Security Token.{% endif %}</p>
+<form method="post" action="{% url 'fbr_save_token' %}" class="row g-2 mb-3 setup-row" data-loading="Saving the token">
+  {% csrf_token %}
+  <input type="hidden" name="environment" value="production">
+  <div class="col-md-8"><label class="visually-hidden" for="prodToken">Production token</label><input class="form-control" id="prodToken" name="token" type="password" autocomplete="off" placeholder="Paste the production token"></div>
+  <div class="col-md-4"><button class="btn btn-thread w-100" id="saveProd" type="submit">Save production token</button></div>
+</form>
+<form method="post" action="{% url 'fbr_mode' %}" class="mb-5" data-loading="Changing mode">
+  {% csrf_token %}
+  {% if company.fbr_mode == 'production' %}
+    <input type="hidden" name="mode" value="sandbox"><button class="btn btn-outline-thread" id="toSandbox" type="submit">Go back to sandbox mode</button>
+  {% else %}
+    <input type="hidden" name="mode" value="production">
+    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="confirmLive" name="confirm" value="yes"><label class="form-check-label" for="confirmLive">I understand invoices I send after this are real and go to FBR.</label></div>
+    <button class="btn btn-outline-thread" id="toProduction" type="submit" {% if not production_credential %}disabled{% endif %}>Switch to production</button>
+  {% endif %}
+</form>
 
 <h3 class="section-title">FBR lists</h3>
 <div class="table-responsive mb-5"><table class="table ledger align-middle">

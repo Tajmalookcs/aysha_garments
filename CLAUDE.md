@@ -47,3 +47,7 @@ The repository is public. Never commit tax numbers, CNICs, IP addresses, tokens,
 ## 8. Earlier projects
 
 Earlier projects are only a reference for FBR rules. This project has its own design and code.
+
+## 9. No real FBR connection by Claude
+
+Strict rule. Claude must never connect to FBR's real servers, sandbox or production, or test against them. Claude must not ask the owner to run a real FBR test without asking first whether it's a good time and which connection to use, because of the IP address it comes from. Real tests are run only by the owner. Automated and local tests must use a fake server.

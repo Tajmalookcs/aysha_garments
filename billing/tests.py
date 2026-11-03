@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from billing.models import Invoice
 from billing.services import (
@@ -436,6 +437,31 @@ class PrintTests(TestCase):
         self.assertContains(page, "REALIRN1")
         self.assertNotContains(page, 'class="stamp"')
 
+    def test_final_copy_has_a_25x25_qr_of_the_irn(self):
+        from billing.qr import irn_matrix
+        for irn in ["7000007DI1747119701593", "3310205676519DI1747119701593"]:
+            matrix = irn_matrix(irn)
+            self.assertEqual((len(matrix), len(matrix[0])), (25, 25))
+        inv = self._invoice()
+        Invoice.objects.filter(pk=inv.pk).update(status="accepted", fbr_invoice_number="7000007DI1747119701593", fbr_environment="production")
+        page = self._page(inv)
+        self.assertContains(page, 'viewBox="0 0 25 25"')
+        self.assertNotContains(page, "could not be made")
+
+    def test_other_copies_have_no_qr(self):
+        inv = self._invoice()
+        Invoice.objects.filter(pk=inv.pk).update(status="accepted", fbr_invoice_number="7000007DI1747119701593", fbr_environment="sandbox")
+        self.assertNotContains(self._page(inv), "<svg")
+
+    def test_irn_too_long_for_the_qr_warns_instead_of_printing_a_bad_code(self):
+        from billing.qr import irn_svg
+        self.assertIsNone(irn_svg("X" * 40))
+        inv = self._invoice()
+        Invoice.objects.filter(pk=inv.pk).update(status="accepted", fbr_invoice_number="X" * 40, fbr_environment="production")
+        page = self._page(inv)
+        self.assertContains(page, "could not be made")
+        self.assertNotContains(page, "<svg")
+
     def test_further_tax_column_only_when_needed(self):
         registered = self._page(self._invoice())
         self.assertNotContains(registered, '<th class="n">Further tax</th>')
@@ -528,9 +554,9 @@ class SalesRegisterTests(TestCase):
         response = self.client.get(reverse("sales_register_csv"), {"from": "2026-10-01", "to": "2026-10-31"})
         self.assertIn("attachment", response["Content-Disposition"])
         text = response.content.decode("utf-8-sig")
-        self.assertIn("Invoice no.,Date,Buyer", text)
-        self.assertIn("AG-000001,2026-10-01,Buyer,Registered,7654321,PUNJAB,1000.00,100.00,900.00,162.00,0.00,0.00,1062.00", text)
-        self.assertIn("Total,,1 invoices,,,,1000.00,100.00,900.00,162.00,0.00,0.00,1062.00", text)
+        self.assertIn("Document,Invoice no.,Date,Buyer", text)
+        self.assertIn("Sale Invoice,AG-000001,2026-10-01,Buyer,Registered,7654321,PUNJAB,1000.00,100.00,900.00,162.00,0.00,0.00,1062.00", text)
+        self.assertIn("Total,,,1 invoices,,,,1000.00,100.00,900.00,162.00,0.00,0.00,1062.00", text)
 
     def test_export_blocks_spreadsheet_formulas(self):
         bad = make_customer(self.company, "=HYPERLINK(1)", Customer.Kind.UNREGISTERED)
@@ -542,3 +568,69 @@ class SalesRegisterTests(TestCase):
         self.client.logout()
         self.assertEqual(self.client.get(reverse("sales_register")).status_code, 302)
         self.assertEqual(self.client.get(reverse("sales_register_csv")).status_code, 302)
+
+
+class DebitNoteTests(TestCase):
+    def setUp(self):
+        self.company = make_company("A")
+        self.product = make_product(self.company)
+        self.customer = make_customer(self.company)
+        self.user = User.objects.create_user("owner", password="x")
+        Membership.objects.create(user=self.user, company=self.company, role="admin")
+        self.client.force_login(self.user)
+        self.today = timezone.localdate()
+        self.original = create_invoice(company=self.company, customer=self.customer, invoice_date=self.today,
+                                       lines=[LineInput(self.product, "piece", "10", "", "1000")])
+        Invoice.objects.filter(pk=self.original.pk).update(status="accepted", fbr_invoice_number="7000007DI1", fbr_environment="sandbox")
+        self.original.refresh_from_db()
+
+    def _note(self, qty="1", day=None, customer=None):
+        return create_invoice(company=self.company, customer=customer or self.customer, invoice_date=day or self.today,
+                              lines=[LineInput(self.product, "piece", qty, "", "1000")], original=self.original)
+
+    def test_note_links_to_the_original_irn(self):
+        note = self._note()
+        self.assertTrue(note.is_debit_note)
+        self.assertEqual(note.invoice_ref_no, "7000007DI1")
+        from fbr.payload import build_payload
+        data = build_payload(note, "SN001")
+        self.assertEqual((data["invoiceType"], data["invoiceRefNo"]), ("Debit Note", "7000007DI1"))
+
+    def test_fbr_rules_are_enforced(self):
+        from datetime import timedelta
+        other = make_customer(self.company, "Other")
+        for kwargs in [{"day": self.today - timedelta(days=1)}, {"day": self.today + timedelta(days=181)}, {"customer": other}, {"qty": "11"}]:
+            with self.assertRaises(InvoiceError, msg=kwargs):
+                self._note(**kwargs)
+        self.assertEqual(self.company.invoices.count(), 1)
+
+    def test_only_accepted_recent_sale_invoices(self):
+        from datetime import timedelta
+        self.assertTrue(self.original.can_add_debit_note)
+        self.assertFalse(self._note().can_add_debit_note)
+        Invoice.objects.filter(pk=self.original.pk).update(invoice_date=self.today - timedelta(days=181))
+        self.original.refresh_from_db()
+        self.assertFalse(self.original.can_add_debit_note)
+        Invoice.objects.filter(pk=self.original.pk).update(invoice_date=self.today, fbr_environment="demo")
+        self.original.refresh_from_db()
+        self.assertFalse(self.original.can_add_debit_note)
+
+    def test_screens(self):
+        detail = reverse("invoice_detail", args=[self.original.pk])
+        self.assertContains(self.client.get(detail), "Make debit note")
+        url = reverse("debit_note_new", args=[self.original.pk])
+        self.assertContains(self.client.get(url), "Save debit note")
+        lines = json.dumps([{"product": self.product.pk, "sold_by": "piece", "quantity": "1", "price": "1000", "discount": "0"}])
+        response = self.client.post(url, {"customer": self.customer.pk, "invoice_date": self.today.isoformat(), "lines": lines}, follow=True)
+        note = Invoice.objects.get(invoice_type="Debit Note")
+        self.assertContains(response, "Debit note")
+        self.assertContains(self.client.get(reverse("invoice_print", args=[note.pk])), "Debit Note")
+        self.assertContains(self.client.get(reverse("invoice_edit", args=[note.pk])), "Edit debit note")
+        self.assertEqual(self.client.post(reverse("invoice_delete", args=[self.original.pk])).status_code, 302)
+        self.assertTrue(Invoice.objects.filter(pk=self.original.pk).exists())
+
+    def test_other_buyer_cannot_be_posted(self):
+        other = make_customer(self.company, "Other")
+        lines = json.dumps([{"product": self.product.pk, "sold_by": "piece", "quantity": "1", "price": "1000", "discount": "0"}])
+        self.client.post(reverse("debit_note_new", args=[self.original.pk]), {"customer": other.pk, "invoice_date": self.today.isoformat(), "lines": lines})
+        self.assertFalse(Invoice.objects.filter(invoice_type="Debit Note").exists())

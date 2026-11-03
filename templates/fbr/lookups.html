@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}FBR lookups{% endblock %}
+{% block content %}
+<header class="page-head"><div><h2>FBR lookups</h2><p class="sub">Ask FBR which units and SRO details apply. These need internet and an approved IP.</p></div>
+<a class="btn btn-link" href="{% url 'fbr_rates' %}">Find tax rates</a></header>
+
+<h3 class="section-title">Units allowed for an HS code</h3>
+<form method="get" class="row g-2 mb-3" data-loading="Asking FBR">
+  <input type="hidden" name="kind" value="uom">
+  <div class="col-md-5"><label class="form-label" for="hs">HS code</label><input class="form-control" id="hs" name="hs" value="{{ q.hs }}" placeholder="0000.0000"></div>
+  <div class="col-md-4"><label class="form-label" for="an">Sales annexure ID</label><input class="form-control" id="an" name="an" value="{{ q.an|default:'3' }}"><div class="form-text">3 is the value in the PRAL spec's example.</div></div>
+  <div class="col-md-3"><label class="form-label d-block">&nbsp;</label><button class="btn btn-thread w-100" id="findUom" type="submit">Find units</button></div>
+</form>
+{% if kind == 'uom' %}{% include "fbr/_lookup_result.html" %}{% endif %}
+
+<h3 class="section-title mt-5">SRO schedules for a rate</h3>
+<form method="get" class="row g-2 mb-3" data-loading="Asking FBR">
+  <input type="hidden" name="kind" value="sro">
+  <div class="col-md-5"><label class="form-label" for="rate">Rate ID, from Find tax rates</label><input class="form-control" id="rate" name="rate" value="{{ q.rate }}"></div>
+  <div class="col-md-4"><label class="form-label" for="pr">Province</label><select class="form-select" id="pr" name="pr">{% for p in provinces %}<option value="{{ p.stateProvinceCode }}" {% if q.pr == p.stateProvinceCode|stringformat:"s" %}selected{% endif %}>{{ p.stateProvinceDesc }}</option>{% endfor %}</select></div>
+  <div class="col-md-3 d-flex align-items-end"><button class="btn btn-thread w-100" type="submit">Find SROs</button></div>
+</form>
+{% if kind == 'sro' %}{% include "fbr/_lookup_result.html" %}{% endif %}
+
+<h3 class="section-title mt-5">Items in an SRO</h3>
+<form method="get" class="row g-2 mb-3" data-loading="Asking FBR">
+  <input type="hidden" name="kind" value="item">
+  <div class="col-md-9"><label class="form-label" for="sro">SRO ID, from the search above</label><input class="form-control" id="sro" name="sro" value="{{ q.sro }}"></div>
+  <div class="col-md-3 d-flex align-items-end"><button class="btn btn-thread w-100" type="submit">Find items</button></div>
+</form>
+{% if kind == 'item' %}{% include "fbr/_lookup_result.html" %}{% endif %}
+{% endblock %}
