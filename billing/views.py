@@ -13,6 +13,8 @@ from fbr.sending import mark_not_found_in_iris, record_found_in_iris, send_invoi
 from fbr.views import assigned_scenarios
 
 from .models import Invoice
+from . import register
+from .words import amount_in_words
 from .services import (
     InvoiceError,
     LineInput,
@@ -210,6 +212,51 @@ def invoice_detail(request, pk):
         "invoice": invoice,
         "scenarios": scenarios,
         "suggested": suggested,
+    })
+
+
+def _register_query(request):
+    start, end, error = register.parse_period(
+        request.GET.get("from", ""), request.GET.get("to", ""), timezone.localdate()
+    )
+    status = request.GET.get("status", "")
+    status = status if status in Invoice.Status.values else ""
+    return start, end, status, error
+
+
+@company_required
+def sales_register(request):
+    start, end, status, error = _register_query(request)
+    if error:
+        messages.error(request, error)
+    invoices = register.filtered(request.company, start, end, status)
+    final = [i for i in invoices if i.is_final]
+    return render(request, "billing/sales_register.html", {
+        "invoices": invoices,
+        "t": register.totals(invoices),
+        "unaccepted": len(invoices) - len(final),
+        "start": start,
+        "end": end,
+        "status": status,
+        "statuses": Invoice.Status.choices,
+    })
+
+
+@company_required
+def sales_register_csv(request):
+    start, end, status, _ = _register_query(request)
+    return register.csv_response(register.filtered(request.company, start, end, status), start, end)
+
+
+@company_required
+def invoice_print(request, pk):
+    invoice = get_object_or_404(request.company.invoices.prefetch_related("items"), pk=pk)
+    return render(request, "billing/invoice_print.html", {
+        "invoice": invoice,
+        "items": invoice.items.all(),
+        "copy": invoice.print_copy,
+        "words": amount_in_words(invoice.grand_total),
+        "after_discount": invoice.total_excl_tax - invoice.total_discount,
     })
 
 

@@ -82,9 +82,43 @@ The token test and list download worked against the FBR sandbox. Invoice sending
 
 Also added at the owner's request: a clear "page expired" screen instead of the plain security error.
 
+## Build A: Printing
+
+Status: Done locally on 2026-11-03. Not pushed yet.
+Date proposed: 2026-11-03
+Date approved: 2026-11-03
+
+### Goal
+A4 invoice printing that can never pass off an unaccepted invoice as final.
+
+### Work
+Print screen with Pending FBR, Sandbox test and final copies, amount in words, and a further tax column only when needed.
+
+### Decisions needed
+- What goes inside the QR code. The spec doesn't say, and its sample QR is only a third-party link.
+
+### Outcome
+The final copy has the FBR logo, IRN and an empty QR box. It only appears after production acceptance, which isn't built yet.
+
+## Build B: Sales register and backup
+
+Status: Done locally on 2026-11-03.
+Date proposed: 2026-11-03
+Date approved: 2026-11-03
+
+### Goal
+Help reconcile the monthly return, and protect the data.
+
+### Work
+- Sales register: date and status filters, totals, and an export that opens in Excel.
+- `backup.bat`: saves the database, keys and media to a folder outside the project.
+- "Send all waiting" was dropped at the owner's request.
+
+### Outcome
+Built and tested. The register totals show a warning when they include invoices not accepted in production.
+
 ## Later builds (not approved yet)
 
 3. Run the sandbox scenarios from the whitelisted computer.
-4. Printing: IRN, QR code and FBR logo.
 5. Reliability: offline queue, sales register, backups.
 6. Go live: production token, first real invoice, training.

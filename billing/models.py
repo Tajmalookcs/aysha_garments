@@ -39,6 +39,7 @@ class Invoice(models.Model):
     # Seller, as it was at sale time.
     seller_name = models.CharField(max_length=200)
     seller_ntn_cnic = models.CharField(max_length=13)
+    seller_strn = models.CharField(max_length=20, blank=True)
     seller_province = models.CharField(max_length=60)
     seller_address = models.TextField()
 
@@ -88,6 +89,20 @@ class Invoice(models.Model):
             and bool(self.fbr_invoice_number)
             and self.fbr_environment == "production"
         )
+
+    @property
+    def print_copy(self):
+        """Which printed copy this invoice gets. Only production acceptance is ever final."""
+        if self.is_final:
+            return {"kind": "final", "title": "", "stamp": "", "notice": ""}
+        if self.status == self.Status.ACCEPTED and self.fbr_environment == "sandbox":
+            return {"kind": "sandbox", "title": "Sandbox test", "stamp": "SANDBOX TEST",
+                    "notice": "Test only. Accepted in FBR's sandbox. This is not a real invoice."}
+        if self.your_reference.startswith("DEMO"):
+            return {"kind": "demo", "title": "Demo", "stamp": "DEMO ONLY",
+                    "notice": "Demo data only. This is not a real invoice."}
+        return {"kind": "pending", "title": "Pending FBR", "stamp": "PENDING FBR",
+                "notice": "Not a final invoice. FBR has not issued an IRN for this invoice."}
 
     @property
     def status_label(self):

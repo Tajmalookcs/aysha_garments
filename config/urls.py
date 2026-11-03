@@ -13,8 +13,11 @@ urlpatterns = [
 
     path("", billing.dashboard, name="dashboard"),
     path("invoices/", billing.invoice_list, name="invoice_list"),
+    path("register/", billing.sales_register, name="sales_register"),
+    path("register/export/", billing.sales_register_csv, name="sales_register_csv"),
     path("invoices/new/", billing.invoice_new, name="invoice_new"),
     path("invoices/<int:pk>/", billing.invoice_detail, name="invoice_detail"),
+    path("invoices/<int:pk>/print/", billing.invoice_print, name="invoice_print"),
     path("invoices/<int:pk>/edit/", billing.invoice_edit, name="invoice_edit"),
     path("invoices/<int:pk>/delete/", billing.invoice_delete, name="invoice_delete"),
     path("invoices/<int:pk>/approve/", billing.invoice_approve, name="invoice_approve"),

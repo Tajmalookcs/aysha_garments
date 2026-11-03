@@ -22,6 +22,7 @@ aysha_garments/
 ├── templates/, static/     Screens, design and local Bootstrap, icons and fonts
 ├── start.bat               Starts the app on Windows
 ├── add_demo_data.bat       Adds labelled demo products, customers and invoices
+├── backup.bat              Backs up the database, keys and media
 ├── instance/               Local database and secret keys; created on first run, never pushed
 ├── design_preview/         The approved design preview
 ├── docs/
@@ -34,7 +35,7 @@ aysha_garments/
 
 ## Status
 
-Core app built: companies, users, products, customers, invoices and approval. The FBR sandbox connection is built but not yet tested against FBR. Production and printing aren't built.
+Core app built: companies, users, products, customers, invoices and approval. The FBR sandbox connection is built but not yet tested against FBR. Invoice printing is built, but the final copy's QR code waits for FBR's rules. The sales register and backup are built. Production isn't built.
 
 ## Run it
 

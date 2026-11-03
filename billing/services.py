@@ -145,6 +145,7 @@ def _invoice_fields(company, customer, computed):
         "status": Invoice.Status.HELD if is_foreign else Invoice.Status.SAVED,
         "seller_name": company.business_name,
         "seller_ntn_cnic": company.ntn_cnic,
+        "seller_strn": company.strn,
         "seller_province": company.province,
         "seller_address": company.address,
         "customer": customer,

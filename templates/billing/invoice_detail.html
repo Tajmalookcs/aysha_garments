@@ -6,8 +6,9 @@
     <h2>Invoice {{ invoice.number }}</h2>
     <p class="sub"><span class="status {{ invoice.status_class }}">{{ invoice.status_label }}</span></p>
   </div>
-  {% if invoice.can_edit or invoice.can_send %}
   <div class="invoice-actions">
+    <a class="btn btn-outline-thread btn-lg" id="printLink" href="{% url 'invoice_print' invoice.pk %}">{% if invoice.is_final %}Print invoice{% else %}Print copy{% endif %}</a>
+  {% if invoice.can_edit or invoice.can_send %}
     {% if invoice.can_edit %}
     <a class="btn btn-link" id="delete" href="{% url 'invoice_delete' invoice.pk %}">Delete</a>
     <a class="btn btn-outline-thread btn-lg" id="edit" href="{% url 'invoice_edit' invoice.pk %}">Edit</a>
@@ -25,8 +26,8 @@
       {% else %}<button class="btn btn-thread btn-lg" type="submit" id="approve">Approve and send to FBR</button>{% endif %}
     </form>
     {% endif %}
-  </div>
   {% endif %}
+  </div>
 </header>
 
 {% if invoice.status == 'saved' %}<p class="sub mb-2">Check the details below. You can still edit or delete it. Nothing goes to FBR until it's approved, and it's locked after that.</p>{% endif %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% load humanize_money %}
+{% block title %}Sales register{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h2>Sales register</h2>
+    <p class="sub">{{ start|date:"d M Y" }} to {{ end|date:"d M Y" }}. Use this to check your monthly return. It doesn't file the return.</p>
+  </div>
+  {% if invoices %}<a class="btn btn-outline-thread" id="export" href="{% url 'sales_register_csv' %}?from={{ start|date:'Y-m-d' }}&amp;to={{ end|date:'Y-m-d' }}&amp;status={{ status }}"><i class="bi bi-download"></i> Export for Excel</a>{% endif %}
+</header>
+<form method="get" class="row g-2 mb-4">
+  <div class="col-md-3"><label class="form-label" for="from">From</label><input class="form-control" id="from" name="from" type="date" value="{{ start|date:'Y-m-d' }}"></div>
+  <div class="col-md-3"><label class="form-label" for="to">To</label><input class="form-control" id="to" name="to" type="date" value="{{ end|date:'Y-m-d' }}"></div>
+  <div class="col-md-4"><label class="form-label" for="status">FBR status</label>
+    <select class="form-select" id="status" name="status"><option value="">All statuses</option>
+      {% for value, label in statuses %}<option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select></div>
+  <div class="col-md-2 d-flex align-items-end"><button class="btn btn-thread w-100" id="show" type="submit">Show</button></div>
+</form>
+{% if invoices %}
+<dl class="today register-totals">
+  <div><dt>Invoices</dt><dd>{{ t.count }}</dd></div>
+  <div><dt>Value after discount</dt><dd>Rs {{ t.after_discount|rupees }}</dd></div>
+  <div><dt>Sales tax</dt><dd>Rs {{ t.total_sales_tax|rupees }}</dd></div>
+  <div><dt>Total</dt><dd>Rs {{ t.grand_total|rupees }}</dd></div>
+</dl>
+{% if unaccepted %}<p class="export-note"><i class="bi bi-exclamation-triangle"></i> These totals include {{ unaccepted }} invoice{{ unaccepted|pluralize }} FBR's production system hasn't accepted. Filter by status to compare with your return.</p>{% endif %}
+<div class="table-responsive"><table class="table ledger align-middle">
+  <thead><tr><th>Invoice and FBR status</th><th>Date</th><th>Buyer</th><th>NTN or CNIC</th><th class="text-end">Value</th><th class="text-end">Discount</th><th class="text-end">Sales tax</th><th class="text-end">Further tax</th><th class="text-end">FED</th><th class="text-end">Total</th></tr></thead>
+  <tbody>{% for i in invoices %}<tr>
+    <td><a href="{% url 'invoice_detail' i.pk %}">{{ i.number }}</a><div class="small"><span class="status {{ i.status_class }}">{{ i.status_label }}</span></div>{% if i.fbr_invoice_number %}<div class="sub small">IRN {{ i.fbr_invoice_number }}</div>{% endif %}</td><td>{{ i.invoice_date|date:"d M Y" }}</td>
+    <td>{{ i.buyer_name }}<div class="sub small">{{ i.get_buyer_kind_display }}</div></td><td>{{ i.buyer_ntn_cnic|default:"-" }}</td>
+    <td class="text-end num">{{ i.total_excl_tax|rupees }}</td><td class="text-end num">{{ i.total_discount|rupees }}</td><td class="text-end num">{{ i.total_sales_tax|rupees }}</td><td class="text-end num">{{ i.total_further_tax|rupees }}</td><td class="text-end num">{{ i.total_fed|rupees }}</td><td class="text-end num"><b>{{ i.grand_total|rupees }}</b></td>
+  </tr>{% endfor %}</tbody>
+  <tfoot><tr class="register-foot"><td colspan="4">Total</td><td class="text-end num">{{ t.total_excl_tax|rupees }}</td><td class="text-end num">{{ t.total_discount|rupees }}</td><td class="text-end num">{{ t.total_sales_tax|rupees }}</td><td class="text-end num">{{ t.total_further_tax|rupees }}</td><td class="text-end num">{{ t.total_fed|rupees }}</td><td class="text-end num">{{ t.grand_total|rupees }}</td></tr></tfoot>
+</table></div>
+{% else %}<div class="empty"><p class="mb-0">No invoices in this period. Try different dates or another status.</p></div>{% endif %}
+{% endblock %}

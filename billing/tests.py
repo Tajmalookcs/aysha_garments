@@ -374,3 +374,171 @@ class FirstRunTests(TestCase):
         self.assertEqual(Membership.objects.get().role, "admin")
         self.client.logout()
         self.assertRedirects(self.client.get(reverse("first_run")), reverse("login"))
+
+
+class PrintTests(TestCase):
+    def setUp(self):
+        self.company = make_company("AYESHA GARMENTS")
+        self.company.strn = "1111111111111"
+        self.company.save()
+        self.product = make_product(self.company)
+        self.customer = make_customer(self.company)
+        self.user = User.objects.create_user("owner", password="x")
+        Membership.objects.create(user=self.user, company=self.company, role="admin")
+        self.client.force_login(self.user)
+
+    def _invoice(self, customer=None, reference=""):
+        return create_invoice(company=self.company, customer=customer or self.customer, invoice_date=date(2026, 11, 2),
+                              lines=[LineInput(self.product, "lot", "2", "5", "1000", "100")], your_reference=reference)
+
+    def _page(self, inv):
+        return self.client.get(reverse("invoice_print", args=[inv.pk]))
+
+    def test_saved_invoice_prints_as_pending_without_logo(self):
+        page = self._page(self._invoice())
+        self.assertContains(page, "PENDING FBR")
+        self.assertContains(page, "Not issued yet")
+        self.assertContains(page, "2 lots of 5 pieces")
+        self.assertContains(page, "1111111111111")
+        self.assertNotContains(page, "fbr-digital-invoicing.png")
+
+    def test_sandbox_acceptance_is_never_final(self):
+        inv = self._invoice()
+        Invoice.objects.filter(pk=inv.pk).update(status="accepted", fbr_invoice_number="X1", fbr_environment="sandbox")
+        page = self._page(inv)
+        self.assertContains(page, "SANDBOX TEST")
+        self.assertContains(page, "X1")
+        self.assertNotContains(page, "fbr-digital-invoicing.png")
+
+    def test_demo_invoice_is_marked_and_has_no_logo(self):
+        inv = self._invoice(reference="DEMO order")
+        Invoice.objects.filter(pk=inv.pk).update(status="accepted", fbr_invoice_number="DEMO-IRN-1", fbr_environment="demo")
+        page = self._page(inv)
+        self.assertContains(page, "DEMO ONLY")
+        self.assertNotContains(page, "fbr-digital-invoicing.png")
+
+    def test_rejected_and_unknown_are_not_final(self):
+        for status in ["rejected", "check", "waiting", "held"]:
+            inv = self._invoice()
+            Invoice.objects.filter(pk=inv.pk).update(status=status)
+            self.assertNotContains(self._page(inv), "fbr-digital-invoicing.png")
+
+    def test_accepted_without_irn_is_not_final(self):
+        inv = self._invoice()
+        Invoice.objects.filter(pk=inv.pk).update(status="accepted", fbr_environment="production")
+        self.assertNotContains(self._page(inv), "fbr-digital-invoicing.png")
+
+    def test_production_acceptance_gets_logo_irn_and_no_watermark(self):
+        inv = self._invoice()
+        Invoice.objects.filter(pk=inv.pk).update(status="accepted", fbr_invoice_number="REALIRN1", fbr_environment="production")
+        page = self._page(inv)
+        self.assertContains(page, "fbr-digital-invoicing.png")
+        self.assertContains(page, "REALIRN1")
+        self.assertNotContains(page, 'class="stamp"')
+
+    def test_further_tax_column_only_when_needed(self):
+        registered = self._page(self._invoice())
+        self.assertNotContains(registered, '<th class="n">Further tax</th>')
+        walkin = make_customer(self.company, "Walk-in", Customer.Kind.UNREGISTERED)
+        self.assertContains(self._page(self._invoice(customer=walkin)), '<th class="n">Further tax</th>')
+
+    def test_other_company_cannot_print(self):
+        other = User.objects.create_user("other", password="x")
+        Membership.objects.create(user=other, company=make_company("B", prefix="BB", ntn="7777777"), role="admin")
+        inv = self._invoice()
+        self.client.force_login(other)
+        self.assertEqual(self._page(inv).status_code, 404)
+
+    def test_no_external_files(self):
+        html = self._page(self._invoice()).content.decode()
+        self.assertNotIn('src="http', html)
+        self.assertNotIn('href="http', html)
+
+    def test_amount_in_words(self):
+        from billing.words import amount_in_words as w
+        cases = {
+            "0": "Rupees Zero Only",
+            "5": "Rupees Five Only",
+            "19": "Rupees Nineteen Only",
+            "100": "Rupees One Hundred Only",
+            "1098": "Rupees One Thousand Ninety Eight Only",
+            "520380": "Rupees Five Lakh Twenty Thousand Three Hundred Eighty Only",
+            "10000000": "Rupees One Crore Only",
+            "123456789": "Rupees Twelve Crore Thirty Four Lakh Fifty Six Thousand Seven Hundred Eighty Nine Only",
+            "1098.50": "Rupees One Thousand Ninety Eight and Fifty Paisa Only",
+            "0.05": "Rupees Zero and Five Paisa Only",
+        }
+        for value, text in cases.items():
+            self.assertEqual(w(value), text)
+
+
+class SalesRegisterTests(TestCase):
+    def setUp(self):
+        self.company = make_company("A")
+        self.product = make_product(self.company, price="1000")
+        self.customer = make_customer(self.company)
+        self.user = User.objects.create_user("owner", password="x")
+        Membership.objects.create(user=self.user, company=self.company, role="admin")
+        self.client.force_login(self.user)
+
+    def _invoice(self, day, company=None, customer=None, product=None):
+        return create_invoice(company=company or self.company, customer=customer or self.customer, invoice_date=date(2026, 10, day),
+                              lines=[LineInput(product or self.product, "piece", "1", "", "1000", "100")])
+
+    def test_period_filter_and_totals(self):
+        self._invoice(1)
+        self._invoice(15)
+        self._invoice(31)
+        page = self.client.get(reverse("sales_register"), {"from": "2026-10-01", "to": "2026-10-15"})
+        self.assertEqual(page.context["t"]["count"], 2)
+        self.assertEqual(page.context["t"]["grand_total"], Decimal("2124.00"))
+        self.assertEqual(page.context["t"]["after_discount"], Decimal("1800.00"))
+        self.assertEqual(page.context["unaccepted"], 2)
+        self.assertContains(page, "AG-000001")
+        self.assertNotContains(page, "AG-000003")
+
+    def test_status_filter(self):
+        self._invoice(1)
+        approve_invoice(self._invoice(2), None)
+        page = self.client.get(reverse("sales_register"), {"from": "2026-10-01", "to": "2026-10-31", "status": "waiting"})
+        self.assertEqual(page.context["t"]["count"], 1)
+
+    def test_production_invoices_get_no_warning(self):
+        inv = self._invoice(1)
+        Invoice.objects.filter(pk=inv.pk).update(status="accepted", fbr_invoice_number="R1", fbr_environment="production")
+        page = self.client.get(reverse("sales_register"), {"from": "2026-10-01", "to": "2026-10-31"})
+        self.assertEqual(page.context["unaccepted"], 0)
+        self.assertNotContains(page, "production system hasn't accepted")
+
+    def test_bad_dates_fall_back_with_a_message(self):
+        for params in [{"from": "bad"}, {"from": "2026-10-31", "to": "2026-10-01"}]:
+            self.assertEqual(self.client.get(reverse("sales_register"), params).status_code, 200)
+            self.assertContains(self.client.get(reverse("sales_register"), params), "this month instead")
+
+    def test_only_this_companys_invoices(self):
+        other = make_company("B", prefix="BB", ntn="7777777")
+        self._invoice(1, company=other, customer=make_customer(other), product=make_product(other))
+        page = self.client.get(reverse("sales_register"), {"from": "2026-10-01", "to": "2026-10-31"})
+        self.assertEqual(page.context["t"]["count"], 0)
+        export = self.client.get(reverse("sales_register_csv"), {"from": "2026-10-01", "to": "2026-10-31"})
+        self.assertNotIn("BB-000001", export.content.decode())
+
+    def test_export(self):
+        self._invoice(1)
+        response = self.client.get(reverse("sales_register_csv"), {"from": "2026-10-01", "to": "2026-10-31"})
+        self.assertIn("attachment", response["Content-Disposition"])
+        text = response.content.decode("utf-8-sig")
+        self.assertIn("Invoice no.,Date,Buyer", text)
+        self.assertIn("AG-000001,2026-10-01,Buyer,Registered,7654321,PUNJAB,1000.00,100.00,900.00,162.00,0.00,0.00,1062.00", text)
+        self.assertIn("Total,,1 invoices,,,,1000.00,100.00,900.00,162.00,0.00,0.00,1062.00", text)
+
+    def test_export_blocks_spreadsheet_formulas(self):
+        bad = make_customer(self.company, "=HYPERLINK(1)", Customer.Kind.UNREGISTERED)
+        self._invoice(1, customer=bad)
+        text = self.client.get(reverse("sales_register_csv"), {"from": "2026-10-01", "to": "2026-10-31"}).content.decode("utf-8-sig")
+        self.assertIn("'=HYPERLINK(1)", text)
+
+    def test_login_required(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("sales_register")).status_code, 302)
+        self.assertEqual(self.client.get(reverse("sales_register_csv")).status_code, 302)

@@ -1,0 +1,89 @@
+{% load static humanize_money %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ invoice.number }} {{ copy.title }}</title>
+<link rel="stylesheet" href="{% static 'css/print.css' %}">
+</head>
+<body class="{{ copy.kind }}">
+<div class="toolbar">
+  <a href="{% url 'invoice_detail' invoice.pk %}">Back to invoice</a>
+  <button type="button" id="print">Print</button>
+</div>
+{% if copy.stamp %}<div class="stamp" aria-hidden="true">{{ copy.stamp }}</div>{% endif %}
+<main class="sheet">
+  <header class="top">
+    <div>
+      <h1>{{ invoice.seller_name|title }}</h1>
+      <p>{{ invoice.seller_address }}, {{ invoice.seller_province|title }}</p>
+      <p>NTN or CNIC {{ invoice.seller_ntn_cnic }}{% if invoice.seller_strn %} &nbsp; STRN {{ invoice.seller_strn }}{% endif %}</p>
+    </div>
+    <div class="title">
+      <h2>Sales Tax Invoice</h2>
+      <dl>
+        <div><dt>Invoice no.</dt><dd>{{ invoice.number }}</dd></div>
+        <div><dt>Date</dt><dd>{{ invoice.invoice_date|date:"d M Y" }}</dd></div>
+        {% if invoice.your_reference %}<div><dt>Your reference</dt><dd>{{ invoice.your_reference }}</dd></div>{% endif %}
+      </dl>
+    </div>
+  </header>
+  {% if copy.notice %}<p class="notice">{{ copy.notice }}</p>{% endif %}
+  <div class="seam"></div>
+  <section class="buyer">
+    <h3>Bill to</h3>
+    <p><b>{{ invoice.buyer_name }}</b> ({{ invoice.get_buyer_kind_display }})</p>
+    <p>{{ invoice.buyer_address }}{% if invoice.buyer_province %}, {{ invoice.buyer_province }}{% endif %}{% if invoice.buyer_country %}, {{ invoice.buyer_country }}{% endif %}</p>
+    {% if invoice.buyer_ntn_cnic %}<p>NTN or CNIC {{ invoice.buyer_ntn_cnic }}</p>{% endif %}
+  </section>
+  <table>
+    <thead><tr>
+      <th>#</th><th>Item</th><th>HS code</th><th class="n">Pieces</th><th class="n">Price</th><th class="n">Value</th><th class="n">Discount</th><th class="n">Rate</th><th class="n">Sales tax</th>
+      {% if invoice.total_further_tax %}<th class="n">Further tax</th>{% endif %}
+      {% if invoice.total_fed %}<th class="n">FED</th>{% endif %}
+      <th class="n">Total</th>
+    </tr></thead>
+    <tbody>{% for l in items %}<tr>
+      <td>{{ l.line_no }}</td>
+      <td class="d"><b>{{ l.description }}</b>{% if l.sold_by == 'lot' %}<br><small>{{ l.entered_quantity|quantity }} lots of {{ l.pieces_per_lot }} pieces</small>{% endif %}</td>
+      <td>{{ l.hs_code }}</td>
+      <td class="n">{{ l.quantity|quantity }}</td>
+      <td class="n">{{ l.price_per_piece|rupees }}</td>
+      <td class="n">{{ l.value_excl_tax|rupees }}</td>
+      <td class="n">{{ l.discount|rupees }}</td>
+      <td class="n">{{ l.rate_label }}</td>
+      <td class="n">{{ l.sales_tax|rupees }}</td>
+      {% if invoice.total_further_tax %}<td class="n">{{ l.further_tax|rupees }}</td>{% endif %}
+      {% if invoice.total_fed %}<td class="n">{{ l.fed_payable|rupees }}</td>{% endif %}
+      <td class="n"><b>{{ l.total|rupees }}</b></td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  <section class="sum">
+    <div class="words"><h3>Amount in words</h3><p>{{ words }}</p></div>
+    <div class="tot">
+      <div><span>Value before discount</span><span>{{ invoice.total_excl_tax|rupees }}</span></div>
+      <div><span>Discount</span><span>- {{ invoice.total_discount|rupees }}</span></div>
+      <div><span>Value after discount</span><span>{{ after_discount|rupees }}</span></div>
+      <div><span>Sales tax</span><span>{{ invoice.total_sales_tax|rupees }}</span></div>
+      <div><span>Further tax</span><span>{{ invoice.total_further_tax|rupees }}</span></div>
+      {% if invoice.total_fed %}<div><span>FED</span><span>{{ invoice.total_fed|rupees }}</span></div>{% endif %}
+      <div class="big"><span>Total (Rs)</span><span>{{ invoice.grand_total|rupees }}</span></div>
+    </div>
+  </section>
+  {% if copy.kind == 'final' %}
+  <section class="fbr">
+    <img src="{% static 'img/fbr-digital-invoicing.png' %}" alt="FBR Digital Invoicing System logo">
+    <div class="qr">QR content not confirmed yet</div>
+    <div class="irn"><small>FBR invoice number (IRN)</small><b>{{ invoice.fbr_invoice_number }}</b>{% if invoice.fbr_dated %}<small>Dated {{ invoice.fbr_dated }}</small>{% endif %}</div>
+  </section>
+  {% else %}
+  <section class="fbr nofbr">
+    <div class="irn"><small>FBR invoice number (IRN)</small><b>{{ invoice.fbr_invoice_number|default:"Not issued yet" }}</b>{% if invoice.fbr_dated %}<small>Dated {{ invoice.fbr_dated }}</small>{% endif %}</div>
+    <p>The FBR logo and QR code print only on invoices FBR accepts in production.</p>
+  </section>
+  {% endif %}
+  <footer><div class="sign">Authorised signature</div></footer>
+</main>
+<script src="{% static 'js/print.js' %}"></script>
+</body>
+</html>

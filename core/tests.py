@@ -91,3 +91,19 @@ class PageExpiredTests(TestCase):
         self.assertContains(response, "This page has expired", status_code=403)
         company.refresh_from_db()
         self.assertEqual(company.business_name, "A")
+
+
+class BackupTests(TestCase):
+    def test_refuses_inside_project_and_empty_install(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from django.conf import settings
+        from django.test import override_settings
+
+        with self.assertRaisesMessage(CommandError, "outside the project"):
+            call_command("backup_data", str(Path(settings.BASE_DIR) / "backups"), stdout=StringIO())
+        with TemporaryDirectory() as tmp:
+            missing = {**settings.DATABASES["default"], "NAME": Path(tmp) / "none.sqlite3"}
+            with override_settings(DATABASES={"default": missing}):
+                with self.assertRaisesMessage(CommandError, "nothing to back up"):
+                    call_command("backup_data", tmp, stdout=StringIO())

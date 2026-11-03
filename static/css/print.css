@@ -1,0 +1,50 @@
+@font-face { font-family: "Bricolage Grotesque"; src: url("../assets/fonts/bricolage-grotesque-latin-wght-normal.woff2") format("woff2"); font-weight: 200 800; }
+@font-face { font-family: "Hanken Grotesk"; src: url("../assets/fonts/hanken-grotesk-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+@page { size: A4; margin: 14mm; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #E4E6F0; color: #1A1F3D; font: 10.5pt/1.4 "Hanken Grotesk", sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; max-width: 210mm; margin: 0 auto; padding: 12px 16px; }
+.toolbar a { color: #1C2764; font-weight: 600; }
+.toolbar button { background: #1C2764; color: #fff; border: 0; border-radius: 6px; padding: 9px 22px; font: 600 11pt "Hanken Grotesk", sans-serif; cursor: pointer; }
+.toolbar a:focus-visible, .toolbar button:focus-visible { outline: 3px solid #F2B84B; outline-offset: 2px; }
+.sheet { background: #fff; width: 210mm; max-width: 100%; min-height: 297mm; margin: 0 auto 24px; padding: 14mm; overflow-x: auto; position: relative; }
+.top { display: flex; justify-content: space-between; gap: 10mm; }
+h1 { font: 700 23pt/1.05 "Bricolage Grotesque", sans-serif; color: #1C2764; margin: 0 0 2mm; }
+.top p { margin: 0; color: #3f4566; font-size: 9.5pt; }
+h2 { font: 600 13pt "Bricolage Grotesque", sans-serif; margin: 0 0 2mm; color: #1C2764; text-align: right; }
+.title dl { margin: 0; min-width: 55mm; }
+.title dl div { display: flex; justify-content: space-between; gap: 6mm; font-size: 9.5pt; }
+dt { color: #555C7D; } dd { margin: 0; font-weight: 600; }
+.seam { border-top: 1.5pt dashed #C98A12; margin: 5mm 0 4mm; }
+h3 { font: 600 9.5pt "Hanken Grotesk", sans-serif; color: #555C7D; margin: 0 0 1mm; }
+.buyer p { margin: 0; }
+table { width: 100%; border-collapse: collapse; margin-top: 6mm; font-size: 8.5pt; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+th { text-align: left; font-weight: 600; border-bottom: 1.5pt solid #1C2764; padding: 1.5mm 1mm; color: #3f4566; white-space: nowrap; }
+td { border-bottom: .5pt solid #bfc4da; padding: 2mm 1mm; vertical-align: top; white-space: nowrap; }
+td.d { white-space: normal; }
+small { color: #555C7D; }
+.n { text-align: right; font-variant-numeric: tabular-nums; }
+.sum { display: flex; justify-content: space-between; gap: 10mm; margin-top: 6mm; break-inside: avoid; }
+.words { flex: 1; } .words p { margin: 0; }
+.tot { width: 75mm; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.tot div { display: flex; justify-content: space-between; padding: .8mm 0; }
+.tot .big { border-top: 1.5pt solid #1C2764; margin-top: 1.5mm; padding-top: 2mm; font: 700 13pt "Bricolage Grotesque", sans-serif; }
+.fbr { display: flex; align-items: center; gap: 6mm; margin-top: 9mm; padding-top: 5mm; border-top: 1.5pt dashed #C98A12; break-inside: avoid; }
+.fbr img { height: 25.4mm; }
+.qr { width: 25.4mm; height: 25.4mm; flex-shrink: 0; border: 1pt dashed #555C7D; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 8pt; color: #555C7D; padding: 1mm; }
+.irn { display: flex; flex-direction: column; } .irn b { font-size: 12pt; word-break: break-all; }
+.nofbr p { margin: 0 0 0 auto; max-width: 70mm; color: #555C7D; font-size: 9pt; text-align: right; }
+footer { margin-top: 22mm; break-inside: avoid; }
+.sign { border-top: .75pt solid #1A1F3D; padding-top: 1mm; width: 55mm; font-size: 8.5pt; }
+.notice { border: 1.25pt solid #8c1b2f; color: #8c1b2f; font-weight: 700; padding: 2mm 3mm; margin: 4mm 0 0; font-size: 10pt; }
+.sandbox .notice, .demo .notice { border-color: #5e3a00; color: #5e3a00; }
+.stamp { position: fixed; top: 45%; left: 0; width: 100%; text-align: center; font: 800 50pt "Bricolage Grotesque", sans-serif; color: rgba(140,27,47,.09); transform: rotate(-24deg); pointer-events: none; white-space: nowrap; z-index: 5; }
+.sandbox .stamp, .demo .stamp { color: rgba(94,58,0,.1); }
+@media print {
+  body { background: #fff; }
+  .toolbar { display: none; }
+  .sheet { width: auto; min-height: 0; margin: 0; padding: 0; overflow: visible; }
+}
+@media (max-width: 800px) { .stamp { font-size: 32pt; } }

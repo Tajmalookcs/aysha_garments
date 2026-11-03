@@ -28,7 +28,7 @@
 ## Open questions
 
 1. How is a foreign buyer reported to FBR? Export invoices must not be treated as ready until this is confirmed.
-2. What goes inside the QR code? The spec does not say.
+2. What goes inside the QR code? The spec does not say, and its sample QR is only a third-party link.
 3. Product list with HS codes, units, prices and tax rates, from the client.
 4. The client's STRN.
 5. How is a discount reported to FBR? The spec has a discount field but doesn't say whether the value sent is before or after it.

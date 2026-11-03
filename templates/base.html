@@ -32,6 +32,7 @@
       <a class="nav-item {% if n == 'dashboard' %}is-active{% endif %}" href="{% url 'dashboard' %}"><i class="bi bi-house"></i>Dashboard</a>
       <a class="nav-item {% if n == 'invoice_new' %}is-active{% endif %}" href="{% url 'invoice_new' %}"><i class="bi bi-receipt"></i>New invoice</a>
       <a class="nav-item {% if n == 'invoice_list' or n == 'invoice_detail' or n == 'invoice_edit' or n == 'invoice_delete' %}is-active{% endif %}" href="{% url 'invoice_list' %}"><i class="bi bi-journal-text"></i>Invoices</a>
+      <a class="nav-item {% if n == 'sales_register' %}is-active{% endif %}" href="{% url 'sales_register' %}"><i class="bi bi-table"></i>Sales register</a>
       <a class="nav-item {% if n == 'customer_list' or n == 'customer_new' or n == 'customer_edit' %}is-active{% endif %}" href="{% url 'customer_list' %}"><i class="bi bi-people"></i>Customers</a>
       {% if is_admin %}
       <a class="nav-item {% if n == 'product_list' or n == 'product_new' or n == 'product_edit' %}is-active{% endif %}" href="{% url 'product_list' %}"><i class="bi bi-box-seam"></i>Products</a>
