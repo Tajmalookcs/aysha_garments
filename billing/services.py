@@ -128,6 +128,8 @@ def next_invoice_number(company) -> str:
 
 
 def _check_records(company, customer, lines):
+    if not company.ntn:
+        raise InvoiceError("Add the company's NTN under Company first.")
     if customer.company_id != company.pk:
         raise InvoiceError("Choose one of this company's customers.")
     if not lines:
@@ -159,7 +161,8 @@ def _invoice_fields(company, customer, computed):
     return {
         "status": Invoice.Status.HELD if is_foreign else Invoice.Status.SAVED,
         "seller_name": company.business_name,
-        "seller_ntn_cnic": company.ntn_cnic,
+        "seller_ntn_cnic": company.fbr_registration,
+        "seller_ntn": company.ntn,
         "seller_strn": company.strn,
         "seller_province": company.province,
         "seller_address": company.address,

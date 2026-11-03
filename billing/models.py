@@ -47,6 +47,7 @@ class Invoice(models.Model):
     # Seller, as it was at sale time.
     seller_name = models.CharField(max_length=200)
     seller_ntn_cnic = models.CharField(max_length=13)
+    seller_ntn = models.CharField(max_length=9, blank=True)
     seller_strn = models.CharField(max_length=20, blank=True)
     seller_province = models.CharField(max_length=60)
     seller_address = models.TextField()

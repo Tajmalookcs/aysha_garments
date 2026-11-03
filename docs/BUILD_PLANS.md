@@ -141,6 +141,8 @@ Support what the PRAL spec v1.12 and User Manual v1.5 require.
 ### Outcome
 Built and tested against the spec's samples and a fake local server.
 
+Also changed at the owner's request: the company now has a required NTN (0000000-0) and an optional CNIC. Invoices print only the NTN, and FBR receives its 7 digits.
+
 ## Later builds (not approved yet)
 
 3. Run the sandbox scenarios from the whitelisted computer.

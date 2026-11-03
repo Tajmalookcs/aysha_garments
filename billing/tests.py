@@ -23,7 +23,7 @@ User = get_user_model()
 
 
 def make_company(name, prefix="AG", ntn="1234567"):
-    return Company.objects.create(business_name=name, ntn_cnic=ntn, province="PUNJAB", address="Addr", invoice_prefix=prefix)
+    return Company.objects.create(business_name=name, ntn=f"{ntn}-1", province="PUNJAB", address="Addr", invoice_prefix=prefix)
 
 
 def make_product(company, name="Quilt", price="4200", rate="18", further="4"):
@@ -349,7 +349,7 @@ class ScreenTests(TestCase):
         cases = [
             {**base, "kind": "registered", "ntn_cnic": ""},
             {**base, "kind": "registered", "ntn_cnic": "12345"},
-            {**base, "kind": "registered", "ntn_cnic": self.a.ntn_cnic},
+            {**base, "kind": "registered", "ntn_cnic": self.a.fbr_registration},
             {**base, "kind": "unregistered", "province": ""},
             {**base, "kind": "foreign", "country": ""},
         ]
@@ -368,7 +368,7 @@ class FirstRunTests(TestCase):
     def test_new_install_goes_to_setup_then_closes(self):
         self.assertRedirects(self.client.get("/"), reverse("first_run"))
         response = self.client.post(reverse("first_run"), {
-            "business_name": "AYESHA GARMENTS", "ntn_cnic": "1234567", "province": "PUNJAB", "address": "Addr",
+            "business_name": "AYESHA GARMENTS", "ntn": "1234567-1", "province": "PUNJAB", "address": "Addr",
             "invoice_prefix": "AG", "username": "owner", "password": "Str0ng-pass-99",
         })
         self.assertRedirects(response, reverse("product_list"))
@@ -634,3 +634,50 @@ class DebitNoteTests(TestCase):
         lines = json.dumps([{"product": self.product.pk, "sold_by": "piece", "quantity": "1", "price": "1000", "discount": "0"}])
         self.client.post(reverse("debit_note_new", args=[self.original.pk]), {"customer": other.pk, "invoice_date": self.today.isoformat(), "lines": lines})
         self.assertFalse(Invoice.objects.filter(invoice_type="Debit Note").exists())
+
+
+class CompanyNtnTests(TestCase):
+    def setUp(self):
+        self.company = Company.objects.create(business_name="A", ntn="1234567-8", cnic="1111122222333", province="PUNJAB", address="Addr", invoice_prefix="AG")
+        self.product = make_product(self.company)
+        self.customer = make_customer(self.company)
+        self.user = User.objects.create_user("owner", password="x")
+        Membership.objects.create(user=self.user, company=self.company, role="admin")
+        self.client.force_login(self.user)
+
+    def _invoice(self):
+        return create_invoice(company=self.company, customer=self.customer, invoice_date=date(2026, 11, 2),
+                              lines=[LineInput(self.product, "piece", "1", "", "1")])
+
+    def test_invoice_shows_ntn_and_never_cnic(self):
+        inv = self._invoice()
+        for name in ["invoice_print", "invoice_detail"]:
+            page = self.client.get(reverse(name, args=[inv.pk]))
+            self.assertContains(page, "1234567-8")
+            self.assertNotContains(page, "1111122222333")
+
+    def test_fbr_receives_the_seven_digit_ntn(self):
+        from fbr.payload import build_payload
+        self.assertEqual(build_payload(self._invoice(), "SN001")["sellerNTNCNIC"], "1234567")
+
+    def test_ntn_required_in_right_format_and_cnic_optional(self):
+        base = {"business_name": "B", "province": "PUNJAB", "address": "A", "invoice_prefix": "BB"}
+        from core.forms import CompanyForm
+        for ntn in ["", "1234567", "1234567-", "123456-8", "1234567-89", "3310200000001"]:
+            self.assertIn("ntn", CompanyForm({**base, "ntn": ntn}).errors, ntn)
+        self.assertTrue(CompanyForm({**base, "ntn": "1234567-8"}).is_valid())
+        self.assertIn("cnic", CompanyForm({**base, "ntn": "1234567-8", "cnic": "123"}).errors)
+        self.assertTrue(CompanyForm({**base, "ntn": "1234567-8", "cnic": "1111122222333"}).is_valid())
+
+    def test_no_invoice_without_ntn(self):
+        Company.objects.filter(pk=self.company.pk).update(ntn="")
+        self.company.refresh_from_db()
+        with self.assertRaisesMessage(InvoiceError, "NTN"):
+            self._invoice()
+
+    def test_buyer_cannot_use_the_companys_ntn_or_cnic(self):
+        from core.forms import CustomerForm
+        base = {"name": "X", "kind": "registered", "province": "PUNJAB", "address": "A", "is_active": "on"}
+        for value in ["1234567", "1111122222333"]:
+            form = CustomerForm({**base, "ntn_cnic": value}, instance=Customer(company=self.company), company=self.company)
+            self.assertIn("ntn_cnic", form.errors, value)

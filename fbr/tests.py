@@ -81,7 +81,7 @@ class ParsingTests(TestCase):
 
 class Base(TestCase):
     def setUp(self):
-        self.company = Company.objects.create(business_name="SELLER", ntn_cnic="1234567", province="PUNJAB", address="Addr", invoice_prefix="AG", sandbox_scenarios="SN001, SN002")
+        self.company = Company.objects.create(business_name="SELLER", ntn="1234567-1", province="PUNJAB", address="Addr", invoice_prefix="AG", sandbox_scenarios="SN001, SN002")
         self.user = get_user_model().objects.create_user("owner", password="x")
         Membership.objects.create(user=self.user, company=self.company, role="admin")
         self.product = Product.objects.create(company=self.company, name="Quilt", hs_code="9404.9000", uom="Numbers, pieces, units", sale_type="Goods at standard rate (default)", rate_label="18%", rate_percent=Decimal("18"), further_tax_percent=Decimal("4"), price_per_piece=Decimal("1000"))
@@ -328,7 +328,7 @@ class ScreenTests(Base):
         self.assertEqual((inv.status, inv.last_error), ("saved", ""))
 
     def test_other_companys_invoice_and_log_blocked(self, req):
-        other = Company.objects.create(business_name="OTHER", ntn_cnic="7777777", province="P", address="A", invoice_prefix="OO")
+        other = Company.objects.create(business_name="OTHER", ntn="7777777-1", province="P", address="A", invoice_prefix="OO")
         customer = Customer.objects.create(company=other, name="B", kind="unregistered", province="P", address="A")
         product = Product.objects.create(company=other, name="P", hs_code="9404.9000", uom="u", sale_type="s", rate_label="18%", rate_percent=Decimal("18"), price_per_piece=Decimal("1"))
         inv = create_invoice(company=other, customer=customer, invoice_date=date(2026, 11, 2), lines=[LineInput(product, "piece", "1", "", "1")])
@@ -466,6 +466,6 @@ class LookupTests(Base):
         self.client.post(reverse("fbr_check_customer", args=[self.reg.pk]))
         self.reg.refresh_from_db()
         self.assertIsNone(self.reg.fbr_checked_at)
-        other = Company.objects.create(business_name="OTHER", ntn_cnic="7777777", province="P", address="A", invoice_prefix="OO")
+        other = Company.objects.create(business_name="OTHER", ntn="7777777-1", province="P", address="A", invoice_prefix="OO")
         customer = Customer.objects.create(company=other, name="B", kind="registered", ntn_cnic="1111111", province="P", address="A")
         self.assertEqual(self.client.post(reverse("fbr_check_customer", args=[customer.pk])).status_code, 404)

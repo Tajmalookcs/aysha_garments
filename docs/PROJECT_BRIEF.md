@@ -13,6 +13,7 @@
 - Client's connection: a static IP, confirmed with the provider
 - Client computer: the client will get a new PC or upgrade Windows before installation
 - QR code: holds the IRN given by FBR (confirmed by the owner)
+- Company registration: NTN (format 0000000-0) is required and prints on invoices; CNIC is optional and doesn't print
 - Invoice flow: save locally first, edit or delete if needed, then an Approve and send button releases it to FBR and locks it
 - Users: one person uses the app and approves invoices
 - Tax: worked out after discount
@@ -33,3 +34,4 @@
 2. Product list with HS codes, units, prices and tax rates, from the client.
 3. How is a discount reported to FBR? The spec has a discount field but doesn't say whether the value sent is before or after it.
 4. Are credit notes supported? The spec lists only Sale Invoice and Debit Note, but its errors mention credit notes.
+5. Does FBR accept the 7 digit NTN for a sole proprietor's token? Error 0401 ties the token to the seller's registration number, so confirm in sandbox.

@@ -8,8 +8,9 @@ from django.conf import settings
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 
-# PRAL spec v1.12: seller is 7 or 13 digits.
-seller_reg_validator = RegexValidator(r"^(\d{7}|\d{13})$", "Enter 7 or 13 digits, with no dashes.")
+# The NTN as FBR prints it, such as 0000000-0. PRAL takes its 7 digits without the check digit.
+ntn_validator = RegexValidator(r"^\d{7}-\d$", "Enter the NTN as 0000000-0.")
+cnic_validator = RegexValidator(r"^\d{13}$", "Enter 13 digits, with no dashes.")
 # PRAL error 0002: buyer is a 13 digit CNIC or a 7 or 9 digit NTN.
 buyer_reg_validator = RegexValidator(r"^(\d{7}|\d{9}|\d{13})$", "Enter 7, 9 or 13 digits, with no dashes.")
 hs_code_validator = RegexValidator(r"^\d{4}\.\d{4}$", "Use the format 0000.0000.")
@@ -22,9 +23,13 @@ class Company(models.Model):
         max_length=200, unique=True,
         help_text="Exactly as registered with FBR. This is the name sent to FBR.",
     )
-    ntn_cnic = models.CharField(
-        "NTN or CNIC", max_length=13, validators=[seller_reg_validator],
-        help_text="7 digit NTN or 13 digit CNIC, with no dashes.",
+    ntn = models.CharField(
+        "NTN", max_length=9, validators=[ntn_validator],
+        help_text="Required. Use the format 0000000-0. This is what prints on invoices.",
+    )
+    cnic = models.CharField(
+        "CNIC", max_length=13, blank=True, validators=[cnic_validator],
+        help_text="Optional. 13 digits, with no dashes. It doesn't print on invoices.",
     )
     strn = models.CharField("STRN", max_length=20, blank=True)
     province = models.CharField(max_length=60)
@@ -44,6 +49,11 @@ class Company(models.Model):
 
     def __str__(self):
         return self.business_name
+
+    @property
+    def fbr_registration(self):
+        """The 7 digit NTN sent to FBR as sellerNTNCNIC."""
+        return self.ntn[:7]
 
 
 class Membership(models.Model):

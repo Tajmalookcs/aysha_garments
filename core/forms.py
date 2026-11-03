@@ -35,7 +35,7 @@ class StyledMixin:
 class CompanyForm(StyledMixin, forms.ModelForm):
     class Meta:
         model = Company
-        fields = ["business_name", "ntn_cnic", "strn", "province", "address", "phone", "invoice_prefix"]
+        fields = ["business_name", "ntn", "cnic", "strn", "province", "address", "phone", "invoice_prefix"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -90,7 +90,7 @@ class CustomerForm(StyledMixin, forms.ModelForm):
         if kind == Customer.Kind.REGISTERED and not ntn and "ntn_cnic" not in self.errors:
             self.add_error("ntn_cnic", "Enter the NTN or CNIC for a registered buyer.")
         # PRAL error 0058: self-invoicing is rejected.
-        if ntn and ntn == self.company.ntn_cnic:
+        if ntn and ntn in (self.company.fbr_registration, self.company.cnic):
             self.add_error("ntn_cnic", "The buyer can't have the same NTN or CNIC as your company.")
         if kind == Customer.Kind.FOREIGN:
             if not data.get("country"):

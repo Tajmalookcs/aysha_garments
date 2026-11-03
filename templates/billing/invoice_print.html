@@ -17,7 +17,7 @@
     <div>
       <h1>{{ invoice.seller_name|title }}</h1>
       <p>{{ invoice.seller_address }}, {{ invoice.seller_province|title }}</p>
-      <p>NTN or CNIC {{ invoice.seller_ntn_cnic }}{% if invoice.seller_strn %} &nbsp; STRN {{ invoice.seller_strn }}{% endif %}</p>
+      <p>{% if invoice.seller_ntn %}NTN {{ invoice.seller_ntn }}{% endif %}{% if invoice.seller_strn %} &nbsp; STRN {{ invoice.seller_strn }}{% endif %}</p>
     </div>
     <div class="title">
       <h2>{% if invoice.is_debit_note %}Debit Note{% else %}Sales Tax Invoice{% endif %}</h2>

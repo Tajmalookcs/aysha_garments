@@ -8,7 +8,7 @@ from core.models import Company, Membership, Product
 
 
 def make(name, ntn):
-    return Company.objects.create(business_name=name, ntn_cnic=ntn, province="PUNJAB", address="A", invoice_prefix="AG")
+    return Company.objects.create(business_name=name, ntn=f"{ntn}-1", province="PUNJAB", address="A", invoice_prefix="AG")
 
 
 class DemoProductTests(TestCase):
