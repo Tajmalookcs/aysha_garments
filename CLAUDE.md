@@ -46,4 +46,4 @@ The repository is public. Never commit tax numbers, CNICs, IP addresses, tokens,
 
 ## 8. Earlier projects
 
-The Rasheed project is only a reference for FBR rules. This project has its own design and code.
+Earlier projects are only a reference for FBR rules. This project has its own design and code.

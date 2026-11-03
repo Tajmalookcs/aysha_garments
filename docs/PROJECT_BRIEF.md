@@ -10,12 +10,13 @@
 - Offline: all design assets are stored locally; invoices are saved locally and uploaded when internet returns
 - Design: new look, with animated login and loading screens
 - Printing and users: A4, one computer (assumed, owner agreed)
+- Client computer: the client will get a new PC or upgrade Windows before installation
 - Invoice flow: save locally first, edit or delete if needed, then an Approve and send button releases it to FBR and locks it
 - Users: one person uses the app and approves invoices
 - Tax: worked out after discount
 - Lots: size varies, so pieces per lot is entered on each invoice line
 - Tech stack: Django + SQLite, with Bootstrap stored locally
-- Reference only: the earlier Rasheed project is used to understand FBR rules, not for its code or design
+- Reference only: an earlier project is used to understand FBR rules, not for its code or design
 
 ## FBR registration status
 

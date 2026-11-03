@@ -12,6 +12,11 @@ from .middleware import SESSION_KEY
 from .models import Company, Customer, Membership, Product
 
 
+def page_expired(request, reason=""):
+    """Shown when a form was opened before a login change, or in another tab."""
+    return render(request, "page_expired.html", status=403)
+
+
 def _brand():
     """One company shows its own name on the login screen; several show a neutral one."""
     companies = list(Company.objects.all()[:2])

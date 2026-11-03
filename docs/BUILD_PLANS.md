@@ -78,7 +78,9 @@ Not included: production token, QR code and printing, sending export invoices.
 - Confirm in sandbox: how FED and SRO fields work for the FED and SRO scenarios.
 
 ### Outcome
-Waiting for the IP approval, then a first run against the FBR sandbox.
+The token test and list download worked against the FBR sandbox. Invoice sending is not yet tested against FBR.
+
+Also added at the owner's request: a clear "page expired" screen instead of the plain security error.
 
 ## Later builds (not approved yet)
 

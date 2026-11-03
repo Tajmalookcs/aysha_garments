@@ -75,3 +75,19 @@ class DemoDataTests(TestCase):
     def test_new_invoice_after_demo_gets_next_number(self):
         call_command("add_demo_data", stdout=StringIO())
         self.assertEqual(next_invoice_number(self.company), "AG-000010")
+
+
+class PageExpiredTests(TestCase):
+    def test_stale_form_gets_a_clear_page_and_saves_nothing(self):
+        from django.contrib.auth import get_user_model
+        from django.test import Client
+
+        company = make("A", "1234567")
+        user = get_user_model().objects.create_user("owner", password="x")
+        Membership.objects.create(user=user, company=company, role="admin")
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(user)
+        response = client.post("/company/", {"business_name": "CHANGED"})
+        self.assertContains(response, "This page has expired", status_code=403)
+        company.refresh_from_db()
+        self.assertEqual(company.business_name, "A")
