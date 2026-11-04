@@ -41,7 +41,7 @@
   </section>
   <table>
     <thead><tr>
-      <th>#</th><th>Item</th><th>HS code</th><th class="n">Pieces</th><th class="n">Price</th><th class="n">Value</th><th class="n">Discount</th><th class="n">Rate</th><th class="n">Sales tax</th>
+      <th>#</th><th>Item</th><th>HS code</th><th class="n">Quantity</th><th class="n">Price</th><th class="n">Value</th><th class="n">Discount</th><th class="n">Rate</th><th class="n">Sales tax</th>
       {% if invoice.total_further_tax %}<th class="n">Further tax</th>{% endif %}
       {% if invoice.total_fed %}<th class="n">FED</th>{% endif %}
       <th class="n">Total</th>
@@ -50,7 +50,7 @@
       <td>{{ l.line_no }}</td>
       <td class="d"><b>{{ l.description }}</b><br><small>Unit: {{ l.uom }}</small>{% if l.sold_by == 'lot' %}<br><small>{{ l.entered_quantity|quantity }} lots of {{ l.pieces_per_lot }} pieces</small>{% endif %}{% if l.sro_schedule_no or l.sro_item_serial_no %}<br><small>SRO {{ l.sro_schedule_no|default:"-" }}, serial {{ l.sro_item_serial_no|default:"-" }}</small>{% endif %}</td>
       <td>{{ l.hs_code }}</td>
-      <td class="n">{{ l.quantity|quantity }}</td>
+      <td class="n">{{ l.quantity|quantity }} {{ l.quantity_unit }}</td>
       <td class="n">{{ l.price_per_piece|rupees }}</td>
       <td class="n">{{ l.value_excl_tax|rupees }}</td>
       <td class="n">{{ l.discount|rupees }}</td>

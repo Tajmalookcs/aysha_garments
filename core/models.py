@@ -116,6 +116,11 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def is_kg(self):
+        """FBR's unit list spells this unit both ways."""
+        return self.uom.strip().lower() in {"kg", "kilogram"}
+
 
 class Customer(models.Model):
     class Kind(models.TextChoices):

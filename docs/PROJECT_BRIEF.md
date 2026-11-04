@@ -25,13 +25,14 @@
 
 - Integrator: PRAL
 - Technical details submitted; IP whitelisting pending with PRAL; sandbox token issued
+- First client's business, confirmed by the client on 2026-11-04: processing and conversion only, no export. Its IRIS profile says Manufacturer and Exporter, which still needs checking.
 - Assigned sandbox scenarios (9): SN001, SN002, SN005, SN006, SN007, SN009, SN016, SN017, SN024
 - Client identity details, the IP, tokens and passwords are deliberately not stored in this repository
 
 ## Open questions
 
-1. How is a foreign buyer reported to FBR? Export invoices must not be treated as ready until this is confirmed.
-2. Product list with HS codes, units, prices and tax rates, from the client.
+1. How is a foreign buyer reported to FBR? Export invoices must not be treated as ready until this is confirmed. The first client told us on 2026-11-04 that it doesn't export, so this matters only for later clients.
+2. Product list with HS codes, units, prices and tax rates, from the client. The client's September 2026 FBR report shows one kind of sale in KG, and the client confirmed on 2026-11-04 that it does conversion only. Still to confirm: whether the same HS code is always used.
 3. How is a discount reported to FBR? The spec has a discount field but doesn't say whether the value sent is before or after it.
 4. Are credit notes supported? The spec lists only Sale Invoice and Debit Note, but its errors mention credit notes.
 5. Does FBR accept the 7 digit NTN for a sole proprietor's token? Error 0401 ties the token to the seller's registration number, so confirm in sandbox.

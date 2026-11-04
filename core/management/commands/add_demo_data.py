@@ -27,6 +27,7 @@ CUSTOMERS = [
 
 # Days ago, customer, final state, lines of (product, sold by, quantity, pieces per lot, discount).
 INVOICES = [
+    (2, "Demo Textile Mills", "saved", [("Demo Processing Work", "kg", "750", "", "0")]),
     (9, "Demo Textile Mills", "accepted", [("Demo Quilt, Double", "lot", "4", "25", "5000")]),
     (7, "Demo Retail Shop", "accepted", [("Demo Cushion, 16 inch", "piece", "40", "", "0"), ("Demo Pillow, Standard", "piece", "30", "", "1000")]),
     (5, "Demo Home Textiles", "rejected", [("Demo Comforter, King", "piece", "20", "", "0")]),

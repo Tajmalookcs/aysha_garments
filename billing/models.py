@@ -159,6 +159,7 @@ class Invoice(models.Model):
 
 class InvoiceItem(models.Model):
     class SoldBy(models.TextChoices):
+        KG = "kg", "KG"
         PIECE = "piece", "Piece"
         LOT = "lot", "Lot"
 
@@ -174,10 +175,10 @@ class InvoiceItem(models.Model):
     rate_label = models.CharField(max_length=100)
     rate_percent = models.DecimalField(max_digits=6, decimal_places=2)
 
-    sold_by = models.CharField(max_length=5, choices=SoldBy.choices, default=SoldBy.PIECE)
+    sold_by = models.CharField(max_length=5, choices=SoldBy.choices, default=SoldBy.KG)
     entered_quantity = models.DecimalField(max_digits=14, decimal_places=4)
     pieces_per_lot = models.PositiveIntegerField(null=True, blank=True)
-    quantity = models.DecimalField("Total pieces", max_digits=14, decimal_places=4)
+    quantity = models.DecimalField("Total quantity", max_digits=14, decimal_places=4)
     price_per_piece = models.DecimalField(max_digits=14, decimal_places=2)
 
     value_excl_tax = models.DecimalField(max_digits=16, decimal_places=2)
@@ -196,3 +197,9 @@ class InvoiceItem(models.Model):
 
     def __str__(self):
         return f"{self.invoice.number} line {self.line_no}"
+
+    @property
+    def quantity_unit(self):
+        if self.sold_by == self.SoldBy.KG:
+            return "KG"
+        return "piece" if self.quantity == 1 else "pieces"

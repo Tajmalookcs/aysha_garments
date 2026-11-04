@@ -7,7 +7,7 @@
 </header>
 {% if products %}
 <div class="table-responsive"><table class="table ledger align-middle">
-  <thead><tr><th>Product</th><th>HS code</th><th>Unit for FBR</th><th>Sale type</th><th class="text-end">Tax rate</th><th class="text-end">Price per piece</th><th>Available</th></tr></thead>
+  <thead><tr><th>Product</th><th>HS code</th><th>Unit for FBR</th><th>Sale type</th><th class="text-end">Tax rate</th><th class="text-end">Price per unit</th><th>Available</th></tr></thead>
   <tbody>{% for p in products %}<tr>
     <td><a href="{% url 'product_edit' p.pk %}">{{ p.name }}</a></td><td>{{ p.hs_code }}</td><td>{{ p.uom }}</td><td>{{ p.sale_type }}</td>
     <td class="text-end num">{{ p.rate_percent }}%</td><td class="text-end num">Rs {{ p.price_per_piece }}</td><td>{{ p.is_active|yesno:"Yes,No" }}</td>

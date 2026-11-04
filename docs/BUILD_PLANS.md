@@ -164,6 +164,30 @@ Cover what Rule 150R(13) and Rule 150XC require.
 ### Outcome
 Built and tested locally.
 
+## Build E: Selling by KG
+
+Status: Done locally on 2026-11-04. Not yet tested against FBR.
+Date proposed: 2026-11-04
+Date approved: 2026-11-04
+
+### Goal
+The client's FBR sales report is in KG, but invoices only allowed pieces and lots. The app serves several clients, so KG becomes the default and piece and lot stay.
+
+### Work
+- A product whose FBR unit is KG or Kilogram is invoiced by KG. Any other product is invoiced by piece or lot.
+- New products start on KG, and a new invoice starts on the first KG product if there is one.
+- The saving step refuses a selling method that doesn't fit the product's unit, because the quantity goes to FBR in that unit.
+- The invoice form, invoice screen, print copy and product screens show the right unit.
+- One KG sample product and invoice added to the demo data.
+- In sandbox, an invoice whose items are all Processing/Conversion of Goods suggests SN016. Approved by the owner on 2026-11-04.
+
+### Decisions needed
+- The client's starting invoice number. The app starts at 1 and has no setting for this yet.
+- The client's report shows whole rupees, while the app keeps paisa. Watch this in the sandbox.
+
+### Outcome
+Built and tested locally with a fake server.
+
 ## Later builds (not approved yet)
 
 3. Run the sandbox scenarios from the whitelisted computer.

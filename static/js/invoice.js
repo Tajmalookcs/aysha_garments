@@ -11,14 +11,17 @@
   const rs = (paisa) => "Rs " + (paisa / 100).toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const num = (v) => parseFloat(v) || 0;
   const product = (id) => PRODUCTS.find((p) => p.id === +id);
+  /* The quantity goes to FBR in the product's unit, so the choices follow it. */
+  const soldByFor = (p, wanted) => p.kg ? "kg" : (wanted === "lot" ? "lot" : "piece");
+  const defaultProduct = () => PRODUCTS.find((p) => p.kg) || PRODUCTS[0];
 
   let nextId = 1;
   const newLine = (d) => {
-    const pid = d && product(d.product) ? +d.product : PRODUCTS[0].id;
+    const pid = d && product(d.product) ? +d.product : defaultProduct().id;
     return {
       id: nextId++,
       product: pid,
-      sold_by: (d && d.sold_by) || "piece",
+      sold_by: soldByFor(product(pid), d && d.sold_by),
       quantity: (d && d.quantity) || "1",
       pieces_per_lot: (d && d.pieces_per_lot) || "",
       price: (d && d.price) || product(pid).price,
@@ -30,14 +33,18 @@
   function render() {
     $("lines").innerHTML = lines.map((l) => {
       const opts = PRODUCTS.map((p) => `<option value="${p.id}" ${p.id === l.product ? "selected" : ""}>${esc(p.name)}</option>`).join("");
+      const isKg = l.sold_by === "kg";
+      const soldBy = isKg
+        ? `<option value="kg" selected>KG</option>`
+        : `<option value="piece" ${l.sold_by === "piece" ? "selected" : ""}>Piece</option><option value="lot" ${l.sold_by === "lot" ? "selected" : ""}>Lot</option>`;
       const lot = l.sold_by === "lot"
         ? `<div class="lot-pieces"><label class="form-label" for="pl${l.id}">Pieces in each lot</label><input class="form-control num" id="pl${l.id}" data-l="${l.id}" data-f="pieces_per_lot" type="number" min="1" step="1" value="${esc(l.pieces_per_lot)}"></div>`
         : "";
       return `<div class="line">
         <div class="f-product"><label class="form-label" for="pr${l.id}">Product</label><select class="form-select" id="pr${l.id}" data-l="${l.id}" data-f="product">${opts}</select></div>
-        <div><label class="form-label" for="un${l.id}">Sold by</label><select class="form-select" id="un${l.id}" data-l="${l.id}" data-f="sold_by"><option value="piece" ${l.sold_by === "piece" ? "selected" : ""}>Piece</option><option value="lot" ${l.sold_by === "lot" ? "selected" : ""}>Lot</option></select></div>
-        <div><label class="form-label" for="qt${l.id}">Quantity</label><input class="form-control num" id="qt${l.id}" data-l="${l.id}" data-f="quantity" type="number" min="0" step="any" value="${esc(l.quantity)}"></div>
-        <div><label class="form-label" for="dp${l.id}">Price per piece</label><input class="form-control num" id="dp${l.id}" data-l="${l.id}" data-f="price" type="number" min="0" step="0.01" value="${esc(l.price)}"></div>
+        <div><label class="form-label" for="un${l.id}">Sold by</label><select class="form-select" id="un${l.id}" data-l="${l.id}" data-f="sold_by">${soldBy}</select></div>
+        <div><label class="form-label" for="qt${l.id}">${isKg ? "Quantity (KG)" : "Quantity"}</label><input class="form-control num" id="qt${l.id}" data-l="${l.id}" data-f="quantity" type="number" min="0" step="any" value="${esc(l.quantity)}"></div>
+        <div><label class="form-label" for="dp${l.id}">${isKg ? "Price per KG" : "Price per piece"}</label><input class="form-control num" id="dp${l.id}" data-l="${l.id}" data-f="price" type="number" min="0" step="0.01" value="${esc(l.price)}"></div>
         <div><label class="form-label" for="dc${l.id}">Discount</label><input class="form-control num" id="dc${l.id}" data-l="${l.id}" data-f="discount" type="number" min="0" step="0.01" value="${esc(l.discount)}"></div>
         <button class="rm" type="button" data-rm="${l.id}" aria-label="Remove this item" ${lines.length === 1 ? "disabled" : ""}><i class="bi bi-x-lg"></i></button>
         ${lot}
@@ -61,7 +68,8 @@
       const fed = Math.round((v - d) * num(p.fed) / 100);
       excl += v; st += s + fed; ft += f; disc += d;
       const meta = $("meta" + l.id), amt = $("amt" + l.id);
-      if (meta) meta.textContent = `${pieces.toLocaleString("en-PK")} ${pieces === 1 ? "piece" : "pieces"}, HS ${p.hs}, rate ${num(p.rate)}%`;
+      const unit = l.sold_by === "kg" ? "KG" : (pieces === 1 ? "piece" : "pieces");
+      if (meta) meta.textContent = `${pieces.toLocaleString("en-PK")} ${unit}, HS ${p.hs}, rate ${num(p.rate)}%`;
       if (amt) amt.textContent = rs(v + s + f + fed - d);
     });
     $("tExcl").textContent = rs(excl);
@@ -76,7 +84,7 @@
     const t = e.target, l = lines.find((x) => x.id === +t.dataset.l);
     if (!l) return;
     const f = t.dataset.f;
-    if (f === "product") { l.product = +t.value; l.price = product(l.product).price; render(); }
+    if (f === "product") { l.product = +t.value; l.price = product(l.product).price; l.sold_by = soldByFor(product(l.product), l.sold_by); render(); }
     else if (f === "sold_by") { l.sold_by = t.value; render(); }
     else { l[f] = t.value; calc(); }
   });

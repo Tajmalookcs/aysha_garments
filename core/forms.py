@@ -50,6 +50,11 @@ class ProductForm(StyledMixin, forms.ModelForm):
             "rate_percent", "further_tax_percent", "fed_percent", "fixed_notified_value",
             "sro_schedule_no", "sro_item_serial_no", "price_per_piece", "is_active",
         ]
+        labels = {"price_per_piece": "Price per unit"}
+        help_texts = {
+            "uom": "Must be a unit FBR allows for this HS code. With KG, invoices are by weight. With any other unit, they're by piece or lot.",
+            "price_per_piece": "Per KG for a KG product, otherwise per piece. You can change it on each invoice.",
+        }
 
     def __init__(self, *args, company, **kwargs):
         super().__init__(*args, **kwargs)
@@ -57,6 +62,8 @@ class ProductForm(StyledMixin, forms.ModelForm):
         _use_fbr_list(self, "hs_code", "hs_codes")
         _use_fbr_list(self, "uom", "uom")
         _use_fbr_list(self, "sale_type", "transaction_types")
+        if not self.instance.pk:
+            self.initial["uom"] = "KG"
 
     def clean_name(self):
         name = self.cleaned_data["name"]

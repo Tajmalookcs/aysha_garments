@@ -7,7 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from billing.models import Invoice
+from billing.models import Invoice, InvoiceItem
 from billing.services import (
     InvoiceError,
     LineInput,
@@ -17,6 +17,7 @@ from billing.services import (
     delete_invoice,
     update_invoice,
 )
+from core.forms import ProductForm
 from core.models import Company, Customer, Membership, Product
 
 User = get_user_model()
@@ -731,3 +732,102 @@ class OfflineAndPrintRuleTests(TestCase):
     def test_print_leaves_out_sro_when_not_used(self):
         self._post()
         self.assertNotContains(self.client.get(reverse("invoice_print", args=[Invoice.objects.get().pk])), "serial")
+
+
+class SellingByKgTests(TestCase):
+    """Made-up figures. KG is the default way of selling; piece and lot stay available."""
+
+    def setUp(self):
+        self.company = make_company("Kg Co")
+        self.kg_product = Product.objects.create(
+            company=self.company, name="Processing", hs_code="0000.0000", uom="KG", sale_type="Sample",
+            rate_label="18%", rate_percent=Decimal("18"), price_per_piece=Decimal("60"),
+        )
+        self.piece_product = make_product(self.company)
+        self.customer = make_customer(self.company)
+        self.user = User.objects.create_user("kg", password="x")
+        Membership.objects.create(user=self.user, company=self.company, role="admin")
+        self.client.force_login(self.user)
+
+    def _invoice(self, quantity="100", price="60"):
+        return create_invoice(company=self.company, customer=self.customer, invoice_date=date(2026, 11, 2),
+                              lines=[LineInput(self.kg_product, "kg", quantity, "", price)])
+
+    def test_kg_line_works_out_value_and_tax(self):
+        r = compute_line(LineInput(self.kg_product, "kg", "100.5", "", "60"), Customer.Kind.REGISTERED)
+        self.assertEqual(r["quantity"], Decimal("100.5"))
+        self.assertEqual(r["value_excl_tax"], Decimal("6030.00"))
+        self.assertEqual(r["sales_tax"], Decimal("1085.40"))
+        self.assertEqual(r["total"], Decimal("7115.40"))
+        self.assertIsNone(r["pieces_per_lot"])
+
+    def test_both_spellings_of_the_unit_count_as_kg(self):
+        for unit in ["KG", "kg", "Kilogram", " KILOGRAM "]:
+            self.kg_product.uom = unit
+            self.assertTrue(self.kg_product.is_kg, unit)
+        self.kg_product.uom = "Numbers, pieces, units"
+        self.assertFalse(self.kg_product.is_kg)
+
+    def test_selling_method_must_fit_the_product_unit(self):
+        for bad in [
+            LineInput(self.piece_product, "kg", "1", "", "10"),
+            LineInput(self.kg_product, "piece", "1", "", "10"),
+            LineInput(self.kg_product, "lot", "1", "5", "10"),
+            LineInput(self.kg_product, "gram", "1", "", "10"),
+        ]:
+            with self.assertRaises(InvoiceError):
+                compute_line(bad, Customer.Kind.REGISTERED)
+
+    def test_piece_and_lot_still_work(self):
+        r = compute_line(LineInput(self.piece_product, "lot", "2", "5", "100"), Customer.Kind.REGISTERED)
+        self.assertEqual(r["quantity"], Decimal("10"))
+        r = compute_line(LineInput(self.piece_product, "piece", "3", "", "100"), Customer.Kind.REGISTERED)
+        self.assertEqual(r["quantity"], Decimal("3"))
+
+    def test_form_without_a_selling_method_follows_the_product(self):
+        for product, expected in [(self.kg_product, "kg"), (self.piece_product, "piece")]:
+            lines = json.dumps([{"product": product.pk, "quantity": "2", "price": "10", "discount": "0"}])
+            response = self.client.post("/invoices/new/", {
+                "customer": self.customer.pk, "invoice_date": "2026-11-02", "lines": lines,
+            })
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(InvoiceItem.objects.latest("pk").sold_by, expected)
+
+    def test_new_invoice_form_tells_the_page_which_products_are_kg(self):
+        response = self.client.get("/invoices/new/")
+        flags = {p["name"]: p["kg"] for p in response.context["products_data"]}
+        self.assertEqual(flags, {"Processing": True, "Quilt": False})
+
+    def test_screens_and_print_show_kg(self):
+        invoice = self._invoice()
+        for url in [f"/invoices/{invoice.pk}/", f"/invoices/{invoice.pk}/print/"]:
+            html = self.client.get(url).content.decode()
+            self.assertIn("100 KG", html, url)
+            self.assertNotIn(">Pieces<", html, url)
+
+    def test_fbr_receives_the_kg_quantity_and_unit(self):
+        from fbr.payload import build_payload
+
+        item = build_payload(self._invoice())["items"][0]
+        self.assertEqual(item["uoM"], "KG")
+        self.assertEqual(item["quantity"], 100.0)
+        self.assertEqual(item["valueSalesExcludingST"], 6000.0)
+        self.assertEqual(item["salesTaxApplicable"], 1080.0)
+
+    def test_new_product_form_starts_on_kg(self):
+        self.assertEqual(ProductForm(company=self.company)["uom"].value(), "KG")
+        self.assertEqual(ProductForm(company=self.company, instance=self.piece_product)["uom"].value(), "Numbers, pieces, units")
+        self.assertIn('value="KG"', self.client.get("/products/new/").content.decode())
+
+    def test_processing_invoice_suggests_its_sandbox_scenario(self):
+        self.company.sandbox_scenarios = "SN001, SN016"
+        self.company.save()
+        for name in ["Processing/Conversion of Goods", "Processing/ Conversion of Goods"]:
+            self.kg_product.sale_type = name
+            self.kg_product.save()
+            response = self.client.get(f"/invoices/{self._invoice().pk}/")
+            self.assertEqual(response.context["suggested"], "SN016", name)
+
+    def test_other_invoices_keep_their_suggested_scenario(self):
+        response = self.client.get(f"/invoices/{self._invoice().pk}/")
+        self.assertEqual(response.context["suggested"], "SN001")

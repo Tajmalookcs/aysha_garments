@@ -36,7 +36,7 @@ aysha_garments/
 
 ## Status
 
-Core app built: companies, users, products, customers, invoices and approval. The FBR sandbox connection is built but not yet tested against FBR. Invoice printing is built, including the QR code. The sales register, backup, lookups, buyer checks and debit notes are built. Production mode is built but off until switched on. FBR sending isn't yet tested against FBR.
+Core app built: companies, users, products, customers, invoices and approval. The FBR sandbox connection is built but not yet tested against FBR. Invoice printing is built, including the QR code. The sales register, backup, lookups, buyer checks and debit notes are built. Invoices work by KG, which is the default, or by piece or lot. Production mode is built but off until switched on. FBR sending isn't yet tested against FBR.
 
 ## Run it
 

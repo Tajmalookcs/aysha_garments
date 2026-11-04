@@ -6,18 +6,19 @@ from django.core.management.base import BaseCommand, CommandError
 
 from core.models import Company, Product
 
-# Name, price per piece. All prices, codes and rates here are placeholders.
+# Name, price per unit, unit. All prices, codes and rates here are placeholders.
 SAMPLES = [
-    ("Demo Quilt, Single", "2800"),
-    ("Demo Quilt, Double", "4200"),
-    ("Demo Comforter, King", "6500"),
-    ("Demo Eiderdown", "5200"),
-    ("Demo Cushion, 16 inch", "650"),
-    ("Demo Cushion, 20 inch", "850"),
-    ("Demo Pillow, Standard", "900"),
-    ("Demo Pillow, Fibre Filled", "1200"),
-    ("Demo Pouffe", "3500"),
-    ("Demo Sleeping Bag", "5400"),
+    ("Demo Processing Work", "60", "KG"),
+    ("Demo Quilt, Single", "2800", "Sample unit"),
+    ("Demo Quilt, Double", "4200", "Sample unit"),
+    ("Demo Comforter, King", "6500", "Sample unit"),
+    ("Demo Eiderdown", "5200", "Sample unit"),
+    ("Demo Cushion, 16 inch", "650", "Sample unit"),
+    ("Demo Cushion, 20 inch", "850", "Sample unit"),
+    ("Demo Pillow, Standard", "900", "Sample unit"),
+    ("Demo Pillow, Fibre Filled", "1200", "Sample unit"),
+    ("Demo Pouffe", "3500", "Sample unit"),
+    ("Demo Sleeping Bag", "5400", "Sample unit"),
 ]
 
 
@@ -40,13 +41,13 @@ class Command(BaseCommand):
         company = companies.get()
 
         added = 0
-        for product_name, price in SAMPLES:
+        for product_name, price, uom in SAMPLES:
             _, created = Product.objects.get_or_create(
                 company=company,
                 name=product_name,
                 defaults={
                     "hs_code": "0000.0000",
-                    "uom": "Sample unit",
+                    "uom": uom,
                     "sale_type": "Sample only, not for FBR",
                     "rate_label": "18%",
                     "rate_percent": Decimal("18"),

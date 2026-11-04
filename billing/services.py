@@ -54,21 +54,29 @@ def compute_line(line: LineInput, buyer_kind: str) -> dict:
     if entered.as_tuple().exponent < -4:
         raise InvoiceError(f"Quantity for {name} can have at most 4 decimal places.")
 
+    # The quantity goes to FBR in the product's unit, so the two have to agree.
+    if line.sold_by == InvoiceItem.SoldBy.KG:
+        if not line.product.is_kg:
+            raise InvoiceError(f"{name} isn't reported to FBR in KG. Sell it by piece or lot, or change the product's unit.")
+    elif line.sold_by in (InvoiceItem.SoldBy.PIECE, InvoiceItem.SoldBy.LOT):
+        if line.product.is_kg:
+            raise InvoiceError(f"{name} is reported to FBR in KG. Sell it by KG, or change the product's unit.")
+    else:
+        raise InvoiceError(f"Choose how {name} is sold.")
+
     per_lot = None
-    pieces = entered
+    total_quantity = entered
     if line.sold_by == InvoiceItem.SoldBy.LOT:
         per_lot_value = _number(line.pieces_per_lot, f"Pieces in each lot for {name}", above=0)
         if per_lot_value != per_lot_value.to_integral_value():
             raise InvoiceError(f"Pieces in each lot for {name} must be a whole number.")
         per_lot = int(per_lot_value)
-        pieces = entered * per_lot
-    elif line.sold_by != InvoiceItem.SoldBy.PIECE:
-        raise InvoiceError(f"Choose piece or lot for {name}.")
+        total_quantity = entered * per_lot
 
     price = money(_number(line.price, f"Price for {name}", above=0))
     discount = money(_number(line.discount or "0", f"Discount for {name}", minimum=0))
 
-    value = money(pieces * price)
+    value = money(total_quantity * price)
     if discount > value:
         raise InvoiceError(f"Discount for {name} can't be more than its value.")
     taxable = value - discount
@@ -89,7 +97,7 @@ def compute_line(line: LineInput, buyer_kind: str) -> dict:
         "sold_by": line.sold_by,
         "entered_quantity": entered,
         "pieces_per_lot": per_lot,
-        "quantity": pieces,
+        "quantity": total_quantity,
         "price_per_piece": price,
         "value_excl_tax": value,
         "sales_tax": sales_tax,

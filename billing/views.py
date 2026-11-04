@@ -89,7 +89,7 @@ def _lines_from_post(request, products):
             raise InvoiceError("Choose a product for every item.")
         lines.append(LineInput(
             product=product,
-            sold_by=row.get("sold_by", "piece"),
+            sold_by=row.get("sold_by") or ("kg" if product.is_kg else "piece"),
             quantity=row.get("quantity", ""),
             pieces_per_lot=row.get("pieces_per_lot", ""),
             price=row.get("price", ""),
@@ -182,6 +182,7 @@ def _invoice_form(request, invoice=None, original=None):
                 "further": str(p.further_tax_percent),
                 "fed": str(p.fed_percent),
                 "hs": p.hs_code,
+                "kg": p.is_kg,
             }
             for p in products
         ],
@@ -226,11 +227,19 @@ def invoice_delete(request, pk):
     return render(request, "billing/invoice_delete.html", {"invoice": invoice})
 
 
+def _suggested_scenario(invoice):
+    """FBR's documents space this sale type's name differently, so spaces are ignored."""
+    sale_types = {"".join(item.sale_type.split()).lower() for item in invoice.items.all()}
+    if sale_types == {"processing/conversionofgoods"}:
+        return "SN016"
+    return {"registered": "SN001", "unregistered": "SN002"}.get(invoice.buyer_kind, "")
+
+
 @company_required
 def invoice_detail(request, pk):
     invoice = get_object_or_404(request.company.invoices.prefetch_related("items"), pk=pk)
     scenarios = assigned_scenarios(request.company) if request.company.fbr_mode == "sandbox" else []
-    suggested = invoice.scenario_id or {"registered": "SN001", "unregistered": "SN002"}.get(invoice.buyer_kind, "")
+    suggested = invoice.scenario_id or _suggested_scenario(invoice)
     return render(request, "billing/invoice_detail.html", {
         "invoice": invoice,
         "scenarios": scenarios,

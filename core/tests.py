@@ -16,10 +16,10 @@ class DemoProductTests(TestCase):
         company = make("A", "1234567")
         out = StringIO()
         call_command("add_demo_products", stdout=out)
-        self.assertIn("Added 10", out.getvalue())
+        self.assertIn("Added 11", out.getvalue())
         call_command("add_demo_products", stdout=StringIO())
         products = Product.objects.filter(company=company)
-        self.assertEqual(products.count(), 10)
+        self.assertEqual(products.count(), 11)
         for product in products:
             self.assertTrue(product.name.startswith("Demo "))
             product.full_clean()
@@ -34,7 +34,7 @@ class DemoProductTests(TestCase):
         with self.assertRaises(CommandError):
             call_command("add_demo_products", stdout=StringIO())
         call_command("add_demo_products", company="b", stdout=StringIO())
-        self.assertEqual(b.products.count(), 10)
+        self.assertEqual(b.products.count(), 11)
         self.assertEqual(a.products.count(), 0)
 
 
@@ -49,11 +49,11 @@ class DemoDataTests(TestCase):
     def test_full_set_once_and_every_status_shows(self):
         call_command("add_demo_data", stdout=StringIO())
         call_command("add_demo_data", stdout=StringIO())
-        self.assertEqual(self.company.products.count(), 10)
+        self.assertEqual(self.company.products.count(), 11)
         self.assertEqual(self.company.customers.count(), 7)
-        self.assertEqual(self.company.invoices.count(), 9)
+        self.assertEqual(self.company.invoices.count(), 10)
         counts = {s: self.company.invoices.filter(status=s).count() for s in ["saved", "waiting", "held", "accepted", "rejected"]}
-        self.assertEqual(counts, {"saved": 2, "waiting": 2, "held": 2, "accepted": 2, "rejected": 1})
+        self.assertEqual(counts, {"saved": 3, "waiting": 2, "held": 2, "accepted": 2, "rejected": 1})
         for customer in self.company.customers.all():
             self.assertTrue(customer.name.startswith("Demo "))
             customer.full_clean()
@@ -70,11 +70,11 @@ class DemoDataTests(TestCase):
             self.assertEqual(self.client.get(url).status_code, 200, url)
         for invoice in self.company.invoices.all():
             self.assertEqual(self.client.get(f"/invoices/{invoice.pk}/").status_code, 200)
-        self.assertContains(self.client.get("/"), "2 invoices need your approval")
+        self.assertContains(self.client.get("/"), "3 invoices need your approval")
 
     def test_new_invoice_after_demo_gets_next_number(self):
         call_command("add_demo_data", stdout=StringIO())
-        self.assertEqual(next_invoice_number(self.company), "AG-000010")
+        self.assertEqual(next_invoice_number(self.company), "AG-000011")
 
 
 class PageExpiredTests(TestCase):
