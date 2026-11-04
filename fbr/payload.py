@@ -8,6 +8,51 @@ def _n(value) -> float:
     return float(Decimal(value))
 
 
+def group_items(items) -> list:
+    """The FBR items for an invoice, each a list of invoice lines.
+
+    Pack lines that match on everything FBR checks go as one item, with their KG, value and tax
+    added up. Pack lines that differ stay separate. Every other line is its own item.
+    To confirm in sandbox: whether FBR accepts the combined item.
+    """
+    groups, by_key = [], {}
+    for item in items:
+        key = (item.hs_code, item.sale_type, item.rate_label, item.uom, item.sro_schedule_no,
+               item.sro_item_serial_no, item.fixed_notified_value)
+        if item.sold_by == "pack" and key in by_key:
+            by_key[key].append(item)
+            continue
+        group = [item]
+        groups.append(group)
+        if item.sold_by == "pack":
+            by_key[key] = group
+    return groups
+
+
+def _fbr_item(lines) -> dict:
+    first = lines[0]
+    add = lambda field: sum((getattr(line, field) for line in lines), Decimal("0"))
+    return {
+        "hsCode": first.hs_code,
+        "productDescription": ", ".join(dict.fromkeys(line.description for line in lines)),
+        "rate": first.rate_label,
+        "uoM": first.uom,
+        "quantity": _n(add("quantity")),
+        "totalValues": _n(add("total")),
+        "valueSalesExcludingST": _n(add("value_excl_tax") - add("discount")),
+        "fixedNotifiedValueOrRetailPrice": _n(first.fixed_notified_value),
+        "salesTaxApplicable": _n(add("sales_tax")),
+        "salesTaxWithheldAtSource": 0.0,
+        "extraTax": "",
+        "furtherTax": _n(add("further_tax")),
+        "sroScheduleNo": first.sro_schedule_no,
+        "fedPayable": _n(add("fed_payable")),
+        "discount": _n(add("discount")),
+        "saleType": first.sale_type,
+        "sroItemSerialNo": first.sro_item_serial_no,
+    }
+
+
 def build_payload(invoice, scenario_id: str = "") -> dict:
     """The invoice JSON. scenarioId is sandbox only, so it's left out in production.
 
@@ -28,28 +73,7 @@ def build_payload(invoice, scenario_id: str = "") -> dict:
         "buyerAddress": invoice.buyer_address,
         "buyerRegistrationType": "Registered" if invoice.buyer_kind == "registered" else "Unregistered",
         "invoiceRefNo": invoice.invoice_ref_no,
-        "items": [
-            {
-                "hsCode": item.hs_code,
-                "productDescription": item.description,
-                "rate": item.rate_label,
-                "uoM": item.uom,
-                "quantity": _n(item.quantity),
-                "totalValues": _n(item.total),
-                "valueSalesExcludingST": _n(item.value_excl_tax - item.discount),
-                "fixedNotifiedValueOrRetailPrice": _n(item.fixed_notified_value),
-                "salesTaxApplicable": _n(item.sales_tax),
-                "salesTaxWithheldAtSource": 0.0,
-                "extraTax": "",
-                "furtherTax": _n(item.further_tax),
-                "sroScheduleNo": item.sro_schedule_no,
-                "fedPayable": _n(item.fed_payable),
-                "discount": _n(item.discount),
-                "saleType": item.sale_type,
-                "sroItemSerialNo": item.sro_item_serial_no,
-            }
-            for item in invoice.items.all()
-        ],
+        "items": [_fbr_item(lines) for lines in group_items(invoice.items.all())],
     }
     if scenario_id:
         data["scenarioId"] = scenario_id

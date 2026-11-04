@@ -31,18 +31,32 @@ aysha_garments/
 │   ├── PRAL_QUESTIONS.md   Questions to ask PRAL support
 │   └── 01 to 04            FBR rules, API, codes and draft data model
 ├── reference/              Official PRAL API specification
+├── licensing/              Demo password's hash and the public key; never the private key
 └── media/                  Client documents; stays on the local computer, never pushed
 ```
 
 ## Status
 
-Core app built: companies, users, products, customers, invoices and approval. The FBR sandbox connection is built but not yet tested against FBR. Invoice printing is built, including the QR code. The sales register, backup, lookups, buyer checks and debit notes are built. Invoices work by KG, which is the default, or by piece or lot. Production mode is built but off until switched on. FBR sending isn't yet tested against FBR.
+Core app built: company, login, products, customers, invoices and approval. The FBR sandbox connection is built but not yet tested against FBR. Invoice printing is built, including the QR code. The sales register, backup, lookups, buyer checks and debit notes are built. Invoices work by KG, which is the default, by pack with KG, or by piece or lot. The demo, registration and developer password are built. Production mode is built but off until a registered copy switches it on. FBR sending isn't yet tested against FBR.
 
 ## Run it
 
 Install Python 3.12 or newer, then double-click `start.bat`. The first run needs internet to install the packages. The app then opens at http://127.0.0.1:8000 and works without internet.
 
 Run the tests with `python manage.py test`.
+
+## Demo and registration
+
+Each client gets a separate install, with one company and one user. A new install runs as a 15 day demo.
+
+Developer only, on your own computer. Keep the keys folder outside this project and back it up:
+
+```
+python manage.py setup_licensing --keys-dir D:\licence_keys
+python manage.py make_licence --keys-dir D:\licence_keys --ntn 0000000-0 --name "BUSINESS NAME" --out D:\licence_keys\licence_client.json
+```
+
+The first command makes the keys and asks for the demo password. The second makes one client's registration file. The client adds that file under Registration.
 
 ## How we work
 

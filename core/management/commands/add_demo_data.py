@@ -26,7 +26,9 @@ CUSTOMERS = [
 ]
 
 # Days ago, customer, final state, lines of (product, sold by, quantity, pieces per lot, discount).
+# A pack line uses the fourth place for its KG.
 INVOICES = [
+    (2, "Demo Textile Mills", "saved", [("Demo Duvet Set, Processing", "pack", "400", "1200", "0"), ("Demo Duvet Set, Processing", "pack", "100", "280", "0")]),
     (2, "Demo Textile Mills", "saved", [("Demo Processing Work", "kg", "750", "", "0")]),
     (9, "Demo Textile Mills", "accepted", [("Demo Quilt, Double", "lot", "4", "25", "5000")]),
     (7, "Demo Retail Shop", "accepted", [("Demo Cushion, 16 inch", "piece", "40", "", "0"), ("Demo Pillow, Standard", "piece", "30", "", "1000")]),
@@ -84,7 +86,10 @@ class Command(BaseCommand):
             lines = []
             for product_name, sold_by, quantity, per_lot, discount in rows:
                 product = Product.objects.get(company=company, name=product_name)
-                lines.append(LineInput(product, sold_by, quantity, per_lot, product.price_per_piece, Decimal(discount)))
+                if sold_by == "pack":
+                    lines.append(LineInput(product, sold_by, quantity, "", product.price_per_piece, Decimal(discount), kg=per_lot, pack_unit=product.pack_unit))
+                else:
+                    lines.append(LineInput(product, sold_by, quantity, per_lot, product.price_per_piece, Decimal(discount)))
             invoice = create_invoice(
                 company=company,
                 customer=Customer.objects.get(company=company, name=customer_name),

@@ -26,7 +26,7 @@
         <div><dt>Date</dt><dd>{{ invoice.invoice_date|date:"d M Y" }}</dd></div>
         <div><dt>Tax period</dt><dd>{{ invoice.invoice_date|date:"F Y" }}</dd></div>
         {% if invoice.is_debit_note %}<div><dt>Original IRN</dt><dd>{{ invoice.invoice_ref_no }}</dd></div>{% endif %}
-        {% if invoice.your_reference %}<div><dt>Your reference</dt><dd>{{ invoice.your_reference }}</dd></div>{% endif %}
+        {% if invoice.your_reference %}<div><dt>Job no.</dt><dd>{{ invoice.your_reference }}</dd></div>{% endif %}
       </dl>
     </div>
   </header>
@@ -38,10 +38,11 @@
     <p><b>{{ invoice.buyer_name }}</b> ({{ invoice.get_buyer_kind_display }})</p>
     <p>{{ invoice.buyer_address }}{% if invoice.buyer_province %}, {{ invoice.buyer_province }}{% endif %}{% if invoice.buyer_country %}, {{ invoice.buyer_country }}{% endif %}</p>
     {% if invoice.buyer_ntn_cnic %}<p>NTN or CNIC {{ invoice.buyer_ntn_cnic }}</p>{% endif %}
+    {% if invoice.buyer_strn %}<p>STRN {{ invoice.buyer_strn }}</p>{% endif %}
   </section>
   <table>
     <thead><tr>
-      <th>#</th><th>Item</th><th>HS code</th><th class="n">Quantity</th><th class="n">Price</th><th class="n">Value</th><th class="n">Discount</th><th class="n">Rate</th><th class="n">Sales tax</th>
+      <th>#</th><th>Item</th><th>HS code</th><th class="n">Quantity</th>{% if invoice.has_pack_lines %}<th class="n">KG</th>{% endif %}<th class="n">Price</th><th class="n">Value</th><th class="n">Discount</th><th class="n">Rate</th><th class="n">Sales tax</th>
       {% if invoice.total_further_tax %}<th class="n">Further tax</th>{% endif %}
       {% if invoice.total_fed %}<th class="n">FED</th>{% endif %}
       <th class="n">Total</th>
@@ -50,7 +51,7 @@
       <td>{{ l.line_no }}</td>
       <td class="d"><b>{{ l.description }}</b><br><small>Unit: {{ l.uom }}</small>{% if l.sold_by == 'lot' %}<br><small>{{ l.entered_quantity|quantity }} lots of {{ l.pieces_per_lot }} pieces</small>{% endif %}{% if l.sro_schedule_no or l.sro_item_serial_no %}<br><small>SRO {{ l.sro_schedule_no|default:"-" }}, serial {{ l.sro_item_serial_no|default:"-" }}</small>{% endif %}</td>
       <td>{{ l.hs_code }}</td>
-      <td class="n">{{ l.quantity|quantity }} {{ l.quantity_unit }}</td>
+      <td class="n">{{ l.display_quantity|quantity }} {{ l.display_unit }}</td>{% if invoice.has_pack_lines %}<td class="n">{% if l.quantity_unit == "KG" %}{{ l.quantity|quantity }}{% endif %}</td>{% endif %}
       <td class="n">{{ l.price_per_piece|rupees }}</td>
       <td class="n">{{ l.value_excl_tax|rupees }}</td>
       <td class="n">{{ l.discount|rupees }}</td>
@@ -64,6 +65,7 @@
   <section class="sum">
     <div class="words"><h3>Amount in words</h3><p>{{ words }}</p></div>
     <div class="tot">
+      {% if invoice.total_kg %}<div><span>Total weight</span><span>{{ invoice.total_kg|quantity }} KG</span></div>{% endif %}
       <div><span>Value before discount</span><span>{{ invoice.total_excl_tax|rupees }}</span></div>
       <div><span>Discount</span><span>- {{ invoice.total_discount|rupees }}</span></div>
       <div><span>Value after discount</span><span>{{ after_discount|rupees }}</span></div>

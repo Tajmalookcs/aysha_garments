@@ -9,6 +9,5 @@
   {% include "core/_fields.html" %}
   <button class="btn btn-thread" type="submit">{{ save_label }}</button>
   {% if back %}<a class="btn btn-link" href="{% url back %}">Cancel</a>{% endif %}
-  {% if extra_link %}<a class="btn btn-link" href="{% url extra_link.0 %}">{{ extra_link.1 }}</a>{% endif %}
 </form>
 {% endblock %}

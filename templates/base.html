@@ -17,15 +17,7 @@
 <div class="screen app is-active">
   <aside class="rail">
     <div class="brand">
-      {% if memberships|length > 1 %}
-      <form method="post" action="{% url 'switch_company' %}" data-loading="Switching company">
-        {% csrf_token %}
-        <label class="visually-hidden" for="company">Company</label>
-        <select id="company" name="company" class="company" data-autosubmit>
-          {% for m in memberships %}<option value="{{ m.company_id }}" {% if m.company_id == company.pk %}selected{% endif %}>{{ m.company.business_name|title }}</option>{% endfor %}
-        </select>
-      </form>
-      {% else %}<p class="company mb-0">{{ company.business_name|title }}</p>{% endif %}
+      <p class="company mb-0">{{ company.business_name|title }}</p>
     </div>
     <nav class="rail-nav" aria-label="Main">
       {% with n=request.resolver_match.url_name %}
@@ -34,14 +26,14 @@
       <a class="nav-item {% if n == 'invoice_list' or n == 'invoice_detail' or n == 'invoice_edit' or n == 'invoice_delete' %}is-active{% endif %}" href="{% url 'invoice_list' %}"><i class="bi bi-journal-text"></i>Invoices</a>
       <a class="nav-item {% if n == 'sales_register' %}is-active{% endif %}" href="{% url 'sales_register' %}"><i class="bi bi-table"></i>Sales register</a>
       <a class="nav-item {% if n == 'customer_list' or n == 'customer_new' or n == 'customer_edit' %}is-active{% endif %}" href="{% url 'customer_list' %}"><i class="bi bi-people"></i>Customers</a>
-      {% if is_admin %}
       <a class="nav-item {% if n == 'product_list' or n == 'product_new' or n == 'product_edit' %}is-active{% endif %}" href="{% url 'product_list' %}"><i class="bi bi-box-seam"></i>Products</a>
-      <a class="nav-item {% if n == 'company_edit' or n == 'company_new' %}is-active{% endif %}" href="{% url 'company_edit' %}"><i class="bi bi-building"></i>Company</a>
+      <a class="nav-item {% if n == 'company_edit' %}is-active{% endif %}" href="{% url 'company_edit' %}"><i class="bi bi-building"></i>Company</a>
       <a class="nav-item {% if n == 'fbr_setup' or n == 'fbr_rates' or n == 'fbr_log' or n == 'fbr_lookups' %}is-active{% endif %}" href="{% url 'fbr_setup' %}"><i class="bi bi-shield-check"></i>FBR setup</a>
-      {% endif %}
+      <a class="nav-item {% if n == 'registration' %}is-active{% endif %}" href="{% url 'registration' %}"><i class="bi bi-patch-check"></i>Registration</a>
       {% endwith %}
     </nav>
     <div class="rail-bottom">
+      {% if licence and not licence.registered %}<a class="demo-left" href="{% url 'registration' %}">{% if licence.expired %}Demo ended{% else %}Demo: {{ licence.days_left }} day{{ licence.days_left|pluralize }} left{% endif %}</a>{% endif %}
       <div id="net" class="net"><i class="bi bi-wifi"></i><span>Online</span></div>
       <form method="post" action="{% url 'logout' %}" class="rail-user">
         {% csrf_token %}<span>{{ request.user.username }}</span><button type="submit">Log out</button>
@@ -49,6 +41,7 @@
     </div>
   </aside>
   <main class="workspace">
+    {% if licence.expired %}<p class="flash error" role="alert">{% if licence.clock_moved_back %}This computer's date has moved back, so the demo has stopped. Correct the date, or register this copy.{% else %}The demo has ended. You can still see your data. Register this copy to make and send invoices.{% endif %}</p>{% endif %}
     {% for message in messages %}<p class="flash {{ message.tags }}" role="alert">{{ message }}</p>{% endfor %}
     {% block content %}{% endblock %}
   </main>

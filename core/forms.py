@@ -1,8 +1,8 @@
 from django import forms
-from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
-from .models import Company, Customer, Membership, Product
+from . import licence
+from .models import Company, Customer, Product
 
 
 def _use_fbr_list(form, field, name):
@@ -37,6 +37,13 @@ class CompanyForm(StyledMixin, forms.ModelForm):
         model = Company
         fields = ["business_name", "ntn", "cnic", "strn", "province", "address", "phone", "invoice_prefix"]
 
+    def clean_ntn(self):
+        ntn = self.cleaned_data["ntn"]
+        registered = licence.installed(self.instance)
+        if registered and registered["ntn"] != ntn:
+            raise forms.ValidationError("This copy is registered to this NTN. A new NTN needs a new registration file.")
+        return ntn
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         _use_fbr_list(self, "province", "provinces")
@@ -46,7 +53,7 @@ class ProductForm(StyledMixin, forms.ModelForm):
     class Meta:
         model = Product
         fields = [
-            "name", "description_for_fbr", "hs_code", "uom", "sale_type", "rate_label",
+            "name", "description_for_fbr", "hs_code", "uom", "pack_unit", "sale_type", "rate_label",
             "rate_percent", "further_tax_percent", "fed_percent", "fixed_notified_value",
             "sro_schedule_no", "sro_item_serial_no", "price_per_piece", "is_active",
         ]
@@ -65,6 +72,13 @@ class ProductForm(StyledMixin, forms.ModelForm):
         if not self.instance.pk:
             self.initial["uom"] = "KG"
 
+    def clean(self):
+        cleaned = super().clean()
+        unit = (cleaned.get("uom") or "").strip().lower()
+        if cleaned.get("pack_unit") and unit not in {"kg", "kilogram"}:
+            self.add_error("pack_unit", "A pack unit only works when the unit reported to FBR is KG.")
+        return cleaned
+
     def clean_name(self):
         name = self.cleaned_data["name"]
         clash = Product.objects.filter(company=self.company, name__iexact=name).exclude(pk=self.instance.pk)
@@ -76,7 +90,7 @@ class ProductForm(StyledMixin, forms.ModelForm):
 class CustomerForm(StyledMixin, forms.ModelForm):
     class Meta:
         model = Customer
-        fields = ["name", "kind", "ntn_cnic", "province", "country", "address", "phone", "is_active"]
+        fields = ["name", "kind", "ntn_cnic", "strn", "province", "country", "address", "phone", "is_active"]
 
     def __init__(self, *args, company, **kwargs):
         super().__init__(*args, **kwargs)
@@ -110,30 +124,41 @@ class CustomerForm(StyledMixin, forms.ModelForm):
         return data
 
 
-class NewUserForm(StyledMixin, forms.Form):
-    username = forms.CharField(max_length=150)
-    password = forms.CharField(widget=forms.PasswordInput, help_text="At least 8 characters, not only numbers.")
-    role = forms.ChoiceField(choices=Membership.Role.choices)
+class DeveloperPasswordForm(StyledMixin, forms.Form):
+    developer_password = forms.CharField(widget=forms.PasswordInput, label="Developer password")
 
-    def clean_username(self):
-        username = self.cleaned_data["username"].strip()
-        if get_user_model().objects.filter(username__iexact=username).exists():
-            raise forms.ValidationError("This username is already taken.")
-        return username
+    def __init__(self, *args, company=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.company = company
 
-    def clean_password(self):
-        password = self.cleaned_data["password"]
-        validate_password(password)
+    def clean_developer_password(self):
+        password = self.cleaned_data["developer_password"]
+        if not licence.check_developer_password(password, self.company):
+            raise forms.ValidationError("That password is wrong.")
         return password
 
 
+class StartNumberForm(forms.Form):
+    last_invoice_number = forms.IntegerField(min_value=0, max_value=99999999)
+
+
 class FirstRunForm(CompanyForm):
+    developer_password = forms.CharField(widget=forms.PasswordInput, label="Developer password",
+                                         help_text="The developer enters this once, to set up this copy.")
     username = forms.CharField(max_length=150, label="Your username")
     password = forms.CharField(widget=forms.PasswordInput, label="Your password",
                                help_text="At least 8 characters, not only numbers.")
 
     class Meta(CompanyForm.Meta):
         pass
+
+    field_order = ["developer_password"]
+
+    def clean_developer_password(self):
+        password = self.cleaned_data["developer_password"]
+        if not licence.check_developer_password(password):
+            raise forms.ValidationError("That password is wrong.")
+        return password
 
     def clean_password(self):
         password = self.cleaned_data["password"]

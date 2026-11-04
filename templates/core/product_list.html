@@ -2,7 +2,7 @@
 {% block title %}Products{% endblock %}
 {% block content %}
 <header class="page-head">
-  <div><h2>Products</h2><p class="sub">Each product holds its own tax details, so operators don't type them.</p></div>
+  <div><h2>Products</h2><p class="sub">Each product holds its own tax details, so they aren't typed on every invoice.</p></div>
   <a class="btn btn-thread" href="{% url 'product_new' %}"><i class="bi bi-plus-lg"></i> New product</a>
 </header>
 {% if products %}

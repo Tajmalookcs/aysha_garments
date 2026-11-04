@@ -105,12 +105,21 @@ h1, h2, h3 { font-family: "Bricolage Grotesque", var(--bs-body-font-family); let
 /* Invoice */
 .invoice-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 36px; align-items: start; }
 .export-note { background: #FCF0D6; color: #5e3a00; padding: 10px 12px; border-radius: 6px; font-size: .92rem; }
-.line { display: grid; grid-template-columns: minmax(180px, 2.4fr) 86px 96px 104px 92px 34px; gap: 10px; padding: 14px 0; border-top: 2px dashed var(--line); align-items: end; }
+.line { display: grid; grid-template-columns: minmax(160px, 2.4fr) 128px 88px 96px 80px 34px; gap: 10px; padding: 14px 0; border-top: 2px dashed var(--line); align-items: end; }
 .line .form-label { font-size: .8rem; color: var(--mute); }
 .line .form-control, .line .form-select { padding-inline: .55rem; }
+.line .form-select { padding-right: 1.7rem; }
 .line-meta { grid-column: 1 / -1; font-size: .84rem; color: var(--mute); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ledger-wide th, .ledger-wide td { font-size: .84rem; padding-inline: .3rem; }
+.ledger-wide td:first-child { white-space: normal; min-width: 130px; }
+.demo-left { display: block; color: inherit; font-size: .85rem; font-weight: 600; margin-bottom: 8px; }
+.demo-tag { font-weight: 800; color: var(--madder); }
+.start-number { max-width: 460px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 2px dashed var(--line); }
+.start-number-row { display: flex; gap: 10px; margin-bottom: 6px; }
+.start-number-row .btn { white-space: nowrap; }
 .line-meta strong { color: var(--ink); font-variant-numeric: tabular-nums; }
-.lot-pieces { grid-column: 3 / 5; }
+.lot-pieces, .pack-kg { grid-column: 3 / 5; }
+.pack-unit { grid-column: 1 / 3; }
 .rm { background: none; border: 0; color: var(--mute); height: 38px; border-radius: 6px; }
 .rm:hover { color: var(--madder); background: #fff; }
 .add-line { color: var(--indigo); font-weight: 600; padding-left: 0; text-decoration: none; }
@@ -152,6 +161,7 @@ h1, h2, h3 { font-family: "Bricolage Grotesque", var(--bs-body-font-family); let
   .line { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .line > .f-product, .line-meta { grid-column: 1 / -1; }
   .lot-pieces { grid-column: 1 / -1; }
+  .pack-unit, .pack-kg { grid-column: auto; }
   .rm { grid-column: 1 / -1; justify-self: end; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -9,6 +9,7 @@ from core.models import Company, Product
 # Name, price per unit, unit. All prices, codes and rates here are placeholders.
 SAMPLES = [
     ("Demo Processing Work", "60", "KG"),
+    ("Demo Duvet Set, Processing", "85", "KG"),
     ("Demo Quilt, Single", "2800", "Sample unit"),
     ("Demo Quilt, Double", "4200", "Sample unit"),
     ("Demo Comforter, King", "6500", "Sample unit"),
@@ -48,6 +49,7 @@ class Command(BaseCommand):
                 defaults={
                     "hs_code": "0000.0000",
                     "uom": uom,
+                    "pack_unit": "SET PACK" if product_name == "Demo Duvet Set, Processing" else "",
                     "sale_type": "Sample only, not for FBR",
                     "rate_label": "18%",
                     "rate_percent": Decimal("18"),

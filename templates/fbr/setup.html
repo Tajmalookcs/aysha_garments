@@ -50,6 +50,8 @@
   {% csrf_token %}
   {% if company.fbr_mode == 'production' %}
     <input type="hidden" name="mode" value="sandbox"><button class="btn btn-outline-thread" id="toSandbox" type="submit">Go back to sandbox mode</button>
+  {% elif not licence.registered %}
+    <p class="sub mb-2">Production needs a registered copy. <a href="{% url 'registration' %}">Register this copy</a> first. The sandbox works during the demo.</p>
   {% else %}
     <input type="hidden" name="mode" value="production">
     <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="confirmLive" name="confirm" value="yes"><label class="form-check-label" for="confirmLive">I understand invoices I send after this are real and go to FBR.</label></div>

@@ -17,7 +17,8 @@ from billing.services import (
     delete_invoice,
     update_invoice,
 )
-from core.forms import ProductForm
+from core.forms import CompanyForm, ProductForm
+from core.testing import DEMO_PASSWORD, register_copy, use_test_licensing
 from core.models import Company, Customer, Membership, Product
 
 User = get_user_model()
@@ -226,10 +227,8 @@ class ScreenTests(TestCase):
         self.product_b = make_product(self.b, "B product")
         self.customer_b = make_customer(self.b, "B buyer")
         self.admin_a = User.objects.create_user("admin_a", password="x")
-        self.oper_a = User.objects.create_user("oper_a", password="x")
         self.admin_b = User.objects.create_user("admin_b", password="x")
         Membership.objects.create(user=self.admin_a, company=self.a, role="admin")
-        Membership.objects.create(user=self.oper_a, company=self.a, role="operator")
         Membership.objects.create(user=self.admin_b, company=self.b, role="admin")
         self.inv_b = create_invoice(company=self.b, customer=self.customer_b, invoice_date=date(2026, 11, 2),
                                     lines=[LineInput(self.product_b, "piece", "1", "", "1")])
@@ -243,7 +242,7 @@ class ScreenTests(TestCase):
         return self.client.post(reverse("invoice_new"), data)
 
     def test_login_required(self):
-        for name in ["dashboard", "invoice_list", "invoice_new", "customer_list", "product_list", "user_list"]:
+        for name in ["dashboard", "invoice_list", "invoice_new", "customer_list", "product_list"]:
             response = self.client.get(reverse(name))
             self.assertEqual(response.status_code, 302, name)
             self.assertIn("/login/", response["Location"])
@@ -251,7 +250,7 @@ class ScreenTests(TestCase):
     def test_all_screens_open_for_admin(self):
         self.client.force_login(self.admin_a)
         for name in ["dashboard", "invoice_list", "invoice_new", "customer_list", "customer_new", "product_list",
-                     "product_new", "company_edit", "company_new", "user_list", "user_new"]:
+                     "product_new", "company_edit", "fbr_setup", "registration"]:
             self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
 
     def test_save_then_approve_flow(self):
@@ -301,11 +300,6 @@ class ScreenTests(TestCase):
         self.assertRedirects(self.client.post(reverse("invoice_delete", args=[inv.pk])), detail)
         self.assertTrue(Invoice.objects.filter(pk=inv.pk).exists())
 
-    def test_operator_cannot_change_products_or_users(self):
-        self.client.force_login(self.oper_a)
-        for name in ["product_list", "product_new", "company_edit", "company_new", "user_list", "user_new"]:
-            self.assertEqual(self.client.get(reverse(name)).status_code, 403, name)
-
     def test_company_data_is_separate(self):
         self.client.force_login(self.admin_a)
         self.assertEqual(self.client.get(reverse("invoice_detail", args=[self.inv_b.pk])).status_code, 404)
@@ -324,11 +318,6 @@ class ScreenTests(TestCase):
         self._post_invoice(customer=self.customer_b.pk)
         self._post_invoice(lines=json.dumps([{"product": self.product_b.pk, "quantity": "1", "price": "1"}]))
         self.assertFalse(Invoice.objects.filter(company=self.a).exists())
-
-    def test_cannot_switch_to_a_company_you_are_not_in(self):
-        self.client.force_login(self.admin_a)
-        self.client.post(reverse("switch_company"), {"company": self.b.pk})
-        self.assertNotContains(self.client.get(reverse("invoice_list")), self.inv_b.number)
 
     def test_bad_post_keeps_the_form_and_saves_nothing(self):
         self.client.force_login(self.admin_a)
@@ -367,10 +356,12 @@ class ScreenTests(TestCase):
 
 class FirstRunTests(TestCase):
     def test_new_install_goes_to_setup_then_closes(self):
+        use_test_licensing(self)
         self.assertRedirects(self.client.get("/"), reverse("first_run"))
         response = self.client.post(reverse("first_run"), {
             "business_name": "AYESHA GARMENTS", "ntn": "1234567-1", "province": "PUNJAB", "address": "Addr",
             "invoice_prefix": "AG", "username": "owner", "password": "Str0ng-pass-99",
+            "developer_password": DEMO_PASSWORD,
         })
         self.assertRedirects(response, reverse("product_list"))
         self.assertEqual(Membership.objects.get().role, "admin")
@@ -388,6 +379,7 @@ class PrintTests(TestCase):
         self.user = User.objects.create_user("owner", password="x")
         Membership.objects.create(user=self.user, company=self.company, role="admin")
         self.client.force_login(self.user)
+        register_copy(self, self.company)
 
     def _invoice(self, customer=None, reference=""):
         return create_invoice(company=self.company, customer=customer or self.customer, invoice_date=date(2026, 11, 2),
@@ -831,3 +823,163 @@ class SellingByKgTests(TestCase):
     def test_other_invoices_keep_their_suggested_scenario(self):
         response = self.client.get(f"/invoices/{self._invoice().pk}/")
         self.assertEqual(response.context["suggested"], "SN001")
+
+
+class PackAndKgTests(TestCase):
+    """Made-up figures. The charge is by the pack, and FBR is told the weight."""
+
+    def setUp(self):
+        self.company = make_company("Pack Co")
+        self.duvet = self._product("Duvet", "SET PACK")
+        self.fitted = self._product("Fitted", "PAIR PACK")
+        self.customer = make_customer(self.company)
+        self.customer.strn = "11-22-3333-444-55"
+        self.customer.save()
+        self.user = User.objects.create_user("pack", password="x")
+        Membership.objects.create(user=self.user, company=self.company, role="admin")
+        self.client.force_login(self.user)
+
+    def _product(self, name, pack_unit, hs="0000.0000", rate="18"):
+        return Product.objects.create(
+            company=self.company, name=name, hs_code=hs, uom="KG", pack_unit=pack_unit, sale_type="Sample",
+            rate_label=f"{rate}%", rate_percent=Decimal(rate), price_per_piece=Decimal("85"),
+        )
+
+    def _line(self, product, packs, rate, kg, unit="SET PACK"):
+        return LineInput(product, "pack", packs, "", rate, "0", kg=kg, pack_unit=unit)
+
+    def _invoice(self, *lines, reference="JOB-1"):
+        return create_invoice(company=self.company, customer=self.customer, invoice_date=date(2026, 11, 2),
+                              lines=list(lines), your_reference=reference)
+
+    def test_value_comes_from_packs_and_quantity_from_kg(self):
+        r = compute_line(self._line(self.duvet, "100", "85", "300.5"), Customer.Kind.REGISTERED)
+        self.assertEqual(r["entered_quantity"], Decimal("100"))
+        self.assertEqual(r["quantity"], Decimal("300.5"))
+        self.assertEqual(r["value_excl_tax"], Decimal("8500.00"))
+        self.assertEqual(r["sales_tax"], Decimal("1530.00"))
+        self.assertEqual(r["pack_unit"], "SET PACK")
+
+    def test_bad_pack_lines_are_refused(self):
+        piece_product = make_product(self.company)
+        for bad in [
+            self._line(self.duvet, "100", "85", ""),
+            self._line(self.duvet, "100", "85", "0"),
+            self._line(self.duvet, "100", "85", "1.12345"),
+            self._line(self.duvet, "100", "85", "1", unit="BOX"),
+            self._line(self.duvet, "100", "85", "1", unit=""),
+            self._line(piece_product, "100", "85", "1"),
+        ]:
+            with self.assertRaises(InvoiceError):
+                compute_line(bad, Customer.Kind.REGISTERED)
+
+    def test_matching_lines_go_to_fbr_as_one_item(self):
+        from fbr.payload import build_payload
+
+        invoice = self._invoice(self._line(self.duvet, "100", "85", "300"),
+                                self._line(self.fitted, "200", "95", "700", unit="PAIR PACK"))
+        self.assertEqual(invoice.items.count(), 2)
+        self.assertEqual(invoice.total_kg, Decimal("1000"))
+        data = build_payload(invoice, "SN016")
+        self.assertEqual(len(data["items"]), 1)
+        item = data["items"][0]
+        self.assertEqual(item["uoM"], "KG")
+        self.assertEqual(item["quantity"], 1000.0)
+        self.assertEqual(item["valueSalesExcludingST"], 27500.0)
+        self.assertEqual(item["salesTaxApplicable"], 4950.0)
+        self.assertEqual(item["totalValues"], 32450.0)
+        self.assertEqual(item["productDescription"], "Duvet, Fitted")
+        self.assertEqual(data["items"][0]["discount"], 0.0)
+
+    def test_same_description_appears_once(self):
+        from fbr.payload import build_payload
+
+        invoice = self._invoice(self._line(self.duvet, "1", "75", "1"), self._line(self.duvet, "1", "85", "1"))
+        self.assertEqual(build_payload(invoice)["items"][0]["productDescription"], "Duvet")
+
+    def test_different_lines_go_as_separate_items(self):
+        from fbr.payload import build_payload
+
+        other_hs = self._product("Other code", "SET PACK", hs="1111.1111")
+        other_rate = self._product("Other rate", "SET PACK", rate="5")
+        invoice = self._invoice(self._line(self.duvet, "100", "85", "300"), self._line(other_hs, "10", "10", "50"),
+                                self._line(self.fitted, "200", "95", "700"), self._line(other_rate, "10", "10", "5"))
+        items = build_payload(invoice)["items"]
+        self.assertEqual([i["hsCode"] for i in items], ["0000.0000", "1111.1111", "0000.0000"])
+        self.assertEqual([i["quantity"] for i in items], [1000.0, 50.0, 5.0])
+        self.assertEqual([i["rate"] for i in items], ["18%", "18%", "5%"])
+
+    def test_other_ways_of_selling_are_not_combined(self):
+        from fbr.payload import build_payload
+
+        piece = make_product(self.company)
+        invoice = self._invoice(LineInput(piece, "piece", "1", "", "10"), LineInput(piece, "piece", "2", "", "10"))
+        self.assertEqual(len(build_payload(invoice)["items"]), 2)
+
+    def test_job_number_and_buyer_strn_print_but_stay_out_of_the_fbr_data(self):
+        from fbr.payload import build_payload
+
+        invoice = self._invoice(self._line(self.duvet, "100", "85", "300"), reference="JOB-777")
+        html = self.client.get(f"/invoices/{invoice.pk}/print/").content.decode()
+        for text in ["Job no.", "JOB-777", "11-22-3333-444-55", "100 SET PACK", "Total weight", "300 KG"]:
+            self.assertIn(text, html)
+        sent = json.dumps(build_payload(invoice))
+        self.assertNotIn("JOB-777", sent)
+        self.assertNotIn("11-22-3333-444-55", sent)
+
+    def test_form_saves_and_reopens_a_pack_line(self):
+        lines = json.dumps([{"product": self.duvet.pk, "quantity": "100", "price": "85", "discount": "0", "kg": "300", "pack_unit": "SET PACK"}])
+        response = self.client.post("/invoices/new/", {"customer": self.customer.pk, "invoice_date": "2026-11-02", "lines": lines})
+        self.assertEqual(response.status_code, 302)
+        item = InvoiceItem.objects.get()
+        self.assertEqual((item.sold_by, item.quantity), ("pack", Decimal("300")))
+        reopened = self.client.get(f"/invoices/{item.invoice_id}/edit/").context["initial_lines"][0]
+        self.assertEqual((reopened["quantity"], reopened["kg"], reopened["pack_unit"]), ("100", "300", "SET PACK"))
+
+    def test_pack_unit_needs_a_kg_product(self):
+        data = {"name": "X", "hs_code": "0000.0000", "uom": "Dozen", "pack_unit": "SET PACK", "sale_type": "S", "rate_label": "18%",
+                "rate_percent": "18", "further_tax_percent": "0", "fed_percent": "0", "fixed_notified_value": "0", "price_per_piece": "1"}
+        form = ProductForm(data, company=self.company)
+        self.assertIn("pack_unit", form.errors)
+        self.assertTrue(ProductForm({**data, "uom": "KG"}, company=self.company).is_valid())
+
+
+class StartingInvoiceNumberTests(TestCase):
+    def setUp(self):
+        self.company = make_company("Num Co")
+        self.product = make_product(self.company)
+        self.customer = make_customer(self.company)
+
+    def _invoice(self):
+        return create_invoice(company=self.company, customer=self.customer, invoice_date=date(2026, 11, 2),
+                              lines=[LineInput(self.product, "piece", "1", "", "1")])
+
+    def test_blank_prefix_continues_after_the_last_number(self):
+        self.company.invoice_prefix = ""
+        self.company.last_invoice_number = 118
+        self.company.save()
+        first, second = self._invoice(), self._invoice()
+        self.assertEqual((first.number, second.number), ("119", "120"))
+
+    def test_deleted_number_is_used_again(self):
+        self.company.invoice_prefix = ""
+        self.company.last_invoice_number = 118
+        self.company.save()
+        first = self._invoice()
+        self._invoice()
+        delete_invoice(first)
+        self.assertEqual(self._invoice().number, "119")
+
+    def test_prefix_keeps_its_format(self):
+        self.company.last_invoice_number = 41
+        self.company.save()
+        self.assertEqual(self._invoice().number, "AG-000042")
+
+    def test_no_last_number_starts_at_one(self):
+        self.assertEqual(self._invoice().number, "AG-000001")
+
+    def test_company_form_takes_a_blank_prefix(self):
+        base = {"business_name": "B", "ntn": "1234567-1", "province": "PUNJAB", "address": "A"}
+        form = CompanyForm({**base, "invoice_prefix": ""}, instance=self.company)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().invoice_prefix, "")

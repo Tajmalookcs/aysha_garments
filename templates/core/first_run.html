@@ -7,9 +7,13 @@
     <form method="post" class="login-form" style="max-width:460px" data-loading="Setting up your company">
       {% csrf_token %}
       <h1>Set up your company</h1>
-      <p class="lead-line">Enter the details exactly as FBR has them, then create your admin login.</p>
+      {% if ready %}
+      <p class="lead-line">Enter the details exactly as FBR has them, then create your login.</p>
       {% include "core/_fields.html" %}
       <button class="btn btn-thread btn-lg w-100" type="submit">Set up company</button>
+      {% else %}
+      <p class="lead-line">This copy isn't ready to set up. Ask the developer.</p>
+      {% endif %}
     </form>
   </section>
 </main>

@@ -7,7 +7,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from django.db import transaction
 from django.utils import timezone
 
-from core.models import Company, Customer
+from core.models import PACK_UNITS, Company, Customer
 
 from .models import Invoice, InvoiceItem
 
@@ -45,6 +45,8 @@ class LineInput:
     pieces_per_lot: object
     price: object
     discount: object = "0"
+    kg: object = ""
+    pack_unit: str = ""
 
 
 def compute_line(line: LineInput, buyer_kind: str) -> dict:
@@ -55,7 +57,7 @@ def compute_line(line: LineInput, buyer_kind: str) -> dict:
         raise InvoiceError(f"Quantity for {name} can have at most 4 decimal places.")
 
     # The quantity goes to FBR in the product's unit, so the two have to agree.
-    if line.sold_by == InvoiceItem.SoldBy.KG:
+    if line.sold_by in (InvoiceItem.SoldBy.KG, InvoiceItem.SoldBy.PACK):
         if not line.product.is_kg:
             raise InvoiceError(f"{name} isn't reported to FBR in KG. Sell it by piece or lot, or change the product's unit.")
     elif line.sold_by in (InvoiceItem.SoldBy.PIECE, InvoiceItem.SoldBy.LOT):
@@ -66,17 +68,28 @@ def compute_line(line: LineInput, buyer_kind: str) -> dict:
 
     per_lot = None
     total_quantity = entered
-    if line.sold_by == InvoiceItem.SoldBy.LOT:
+    charged_quantity = entered
+    pack_unit = ""
+    if line.sold_by == InvoiceItem.SoldBy.PACK:
+        # The charge is by the pack. FBR is told the weight.
+        pack_unit = line.pack_unit
+        if pack_unit not in {value for value, _ in PACK_UNITS}:
+            raise InvoiceError(f"Choose the pack unit for {name}.")
+        total_quantity = _number(line.kg, f"KG for {name}", above=0)
+        if total_quantity.as_tuple().exponent < -4:
+            raise InvoiceError(f"KG for {name} can have at most 4 decimal places.")
+    elif line.sold_by == InvoiceItem.SoldBy.LOT:
         per_lot_value = _number(line.pieces_per_lot, f"Pieces in each lot for {name}", above=0)
         if per_lot_value != per_lot_value.to_integral_value():
             raise InvoiceError(f"Pieces in each lot for {name} must be a whole number.")
         per_lot = int(per_lot_value)
         total_quantity = entered * per_lot
+        charged_quantity = total_quantity
 
     price = money(_number(line.price, f"Price for {name}", above=0))
     discount = money(_number(line.discount or "0", f"Discount for {name}", minimum=0))
 
-    value = money(total_quantity * price)
+    value = money(charged_quantity * price)
     if discount > value:
         raise InvoiceError(f"Discount for {name} can't be more than its value.")
     taxable = value - discount
@@ -95,6 +108,7 @@ def compute_line(line: LineInput, buyer_kind: str) -> dict:
         "rate_label": line.product.rate_label,
         "rate_percent": line.product.rate_percent,
         "sold_by": line.sold_by,
+        "pack_unit": pack_unit,
         "entered_quantity": entered,
         "pieces_per_lot": per_lot,
         "quantity": total_quantity,
@@ -119,20 +133,20 @@ def parse_date(raw) -> date:
 
 
 def next_invoice_number(company) -> str:
-    """The company's lowest free number, so a deleted invoice's number is used again.
+    """The lowest free number after the company's last number, so a deleted invoice's number is used again.
 
     Only unapproved invoices can be deleted, so a reused number has never reached FBR.
     """
-    start = f"{company.invoice_prefix}-"
+    start = f"{company.invoice_prefix}-" if company.invoice_prefix else ""
     used = set()
     for number in Invoice.objects.filter(company=company, number__startswith=start).values_list("number", flat=True):
         suffix = number[len(start):]
         if suffix.isdigit():
             used.add(int(suffix))
-    seq = 1
+    seq = company.last_invoice_number + 1
     while seq in used:
         seq += 1
-    return f"{start}{seq:06d}"
+    return f"{start}{seq:06d}" if start else str(seq)
 
 
 def _check_records(company, customer, lines):
@@ -178,6 +192,7 @@ def _invoice_fields(company, customer, computed):
         "buyer_name": customer.name,
         "buyer_kind": customer.kind,
         "buyer_ntn_cnic": customer.ntn_cnic,
+        "buyer_strn": customer.strn,
         "buyer_province": customer.province,
         "buyer_country": customer.country,
         "buyer_address": customer.address,

@@ -188,6 +188,57 @@ The client's FBR sales report is in KG, but invoices only allowed pieces and lot
 ### Outcome
 Built and tested locally with a fake server.
 
+## Build F: Pack lines with KG, job number, buyer STRN and last invoice number
+
+Status: Done locally on 2026-11-04. Not yet tested against FBR.
+Date proposed: 2026-11-04
+Date approved: 2026-11-04
+
+### Goal
+The first client charges by the set or pack, but reports KG to FBR, because that's the unit for its HS code (the client's statement). The app needs both on each line.
+
+### Work
+- A KG product can have a pack unit. Its invoice line has packs, a rate per pack and KG. The value comes from packs and rate.
+- Total weight shows at the end of the invoice, on screen and in print.
+- "Your reference" is now "Job no.". It prints but doesn't go to FBR.
+- Customers have a STRN. It prints with the NTN but doesn't go to FBR.
+- FBR gets KG as the quantity. Pack lines that match on HS code, sale type, rate, unit, SRO details and fixed value go as one item, with KG, value and tax added up. Pack lines that differ go as separate items. Other lines stay separate.
+- Companies can enter their last invoice number. New invoices take the lowest free number after it, so a deleted number is used again. A blank prefix gives plain numbers like 119.
+
+### Decisions needed
+- Does FBR accept the combined item? The owner will check this in the sandbox.
+
+### Outcome
+Built and tested locally with a fake server.
+
+## Build G: One install, demo and registration
+
+Status: Done locally on 2026-11-04. Not yet tested against FBR.
+Date proposed: 2026-11-04
+Date approved: 2026-11-04
+
+### Goal
+Each client gets a separate install, used by one person. New installs run as a demo until the developer registers them.
+
+### Work
+- Removed new company, switch company, user screens and the operator role. The database structure stays, so existing data is safe.
+- Setup needs the developer password. Without the demo file, this copy says it isn't ready.
+- Demo: 15 days from first use. Invoices say DEMO on screen and in print, the sandbox works and production is refused. After 15 days, or if the date moves back, new invoices and sending stop, while old data stays open.
+- Registration: a file signed with the developer's private key, tied to the client's NTN, replaces the demo. It holds the hash of that client's developer password.
+- Production: needs registration, a production token and the existing confirmation tick.
+- Company details ask for the developer password, and stay open for 10 minutes.
+- The last invoice number has its own box on the new invoice screen, which closes after the first invoice.
+- Developer commands: `setup_licensing` and `make_licence`.
+
+### Limits
+- Someone who can change the code can remove these checks. The code runs on the client's computer.
+
+### Decisions needed
+- The owner still has to run `setup_licensing` and add `licensing/demo.json` and `licensing/public_key.pem` to the repository. Until then, new installs can't be set up.
+
+### Outcome
+Built and tested locally with a fake server.
+
 ## Later builds (not approved yet)
 
 3. Run the sandbox scenarios from the whitelisted computer.

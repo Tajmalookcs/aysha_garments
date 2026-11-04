@@ -19,3 +19,7 @@ staticfiles/
 
 # Local app data: database and generated secret key
 instance/
+
+# Developer's signing key and clients' registration files
+*private*.pem
+licence_*.json

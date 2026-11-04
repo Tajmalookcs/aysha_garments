@@ -57,6 +57,7 @@ class Invoice(models.Model):
     buyer_name = models.CharField(max_length=200)
     buyer_kind = models.CharField(max_length=15, choices=Customer.Kind.choices)
     buyer_ntn_cnic = models.CharField(max_length=13, blank=True)
+    buyer_strn = models.CharField(max_length=30, blank=True)
     buyer_province = models.CharField(max_length=60, blank=True)
     buyer_country = models.CharField(max_length=60, blank=True)
     buyer_address = models.TextField(blank=True)
@@ -149,6 +150,14 @@ class Invoice(models.Model):
         return self.status in (self.Status.SAVED, self.Status.REJECTED)
 
     @property
+    def has_pack_lines(self):
+        return any(i.sold_by == InvoiceItem.SoldBy.PACK for i in self.items.all())
+
+    @property
+    def total_kg(self):
+        return sum((i.quantity for i in self.items.all() if i.quantity_unit == "KG"), Decimal("0"))
+
+    @property
     def can_send(self):
         return self.status == self.Status.WAITING
 
@@ -160,6 +169,7 @@ class Invoice(models.Model):
 class InvoiceItem(models.Model):
     class SoldBy(models.TextChoices):
         KG = "kg", "KG"
+        PACK = "pack", "Pack and KG"
         PIECE = "piece", "Piece"
         LOT = "lot", "Lot"
 
@@ -176,6 +186,7 @@ class InvoiceItem(models.Model):
     rate_percent = models.DecimalField(max_digits=6, decimal_places=2)
 
     sold_by = models.CharField(max_length=5, choices=SoldBy.choices, default=SoldBy.KG)
+    pack_unit = models.CharField(max_length=20, blank=True)
     entered_quantity = models.DecimalField(max_digits=14, decimal_places=4)
     pieces_per_lot = models.PositiveIntegerField(null=True, blank=True)
     quantity = models.DecimalField("Total quantity", max_digits=14, decimal_places=4)
@@ -200,6 +211,14 @@ class InvoiceItem(models.Model):
 
     @property
     def quantity_unit(self):
-        if self.sold_by == self.SoldBy.KG:
+        if self.sold_by in (self.SoldBy.KG, self.SoldBy.PACK):
             return "KG"
         return "piece" if self.quantity == 1 else "pieces"
+
+    @property
+    def display_quantity(self):
+        return self.entered_quantity if self.sold_by == self.SoldBy.PACK else self.quantity
+
+    @property
+    def display_unit(self):
+        return self.pack_unit if self.sold_by == self.SoldBy.PACK else self.quantity_unit

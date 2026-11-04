@@ -6,6 +6,8 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 INSTANCE_DIR = BASE_DIR / "instance"
+LICENSING_DIR = BASE_DIR / "licensing"
+LICENCE_FILE = INSTANCE_DIR / "licence.json"
 INSTANCE_DIR.mkdir(exist_ok=True)
 
 
@@ -43,6 +45,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.FirstRunMiddleware",
     "core.middleware.ActiveCompanyMiddleware",
+    "core.middleware.LicenceMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

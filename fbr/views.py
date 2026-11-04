@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from billing.models import Invoice
-from core.decorators import admin_required, company_required
+from core.decorators import company_required
 from core.models import Customer
 
 from . import client, refs
@@ -18,7 +18,7 @@ def assigned_scenarios(company):
     return [c for c in re.split(r"[\s,]+", company.sandbox_scenarios.upper()) if c in SCENARIOS]
 
 
-@admin_required
+@company_required
 def setup(request):
     company = request.company
     credential = FbrCredential.objects.filter(company=company, environment="sandbox").first()
@@ -43,7 +43,7 @@ def setup(request):
 
 
 @require_POST
-@admin_required
+@company_required
 def save_token(request):
     raw = request.POST.get("token", "").strip()
     environment = request.POST.get("environment", "sandbox")
@@ -61,7 +61,7 @@ def save_token(request):
 
 
 @require_POST
-@admin_required
+@company_required
 def switch_mode(request):
     """Moving to production means real invoices, so it needs a token and a clear confirmation."""
     company = request.company
@@ -71,7 +71,9 @@ def switch_mode(request):
         company.save(update_fields=["fbr_mode"])
         messages.success(request, "Sandbox mode is on. Invoices you send are tests.")
     elif wanted == "production":
-        if not FbrCredential.objects.filter(company=company, environment="production").exists():
+        if not request.licence.registered:
+            messages.error(request, "Production needs a registered copy. Register this copy first.")
+        elif not FbrCredential.objects.filter(company=company, environment="production").exists():
             messages.error(request, "Save the production token first.")
         elif request.POST.get("confirm") != "yes":
             messages.error(request, "Tick the box to confirm that you want to send real invoices.")
@@ -83,7 +85,7 @@ def switch_mode(request):
 
 
 @require_POST
-@admin_required
+@company_required
 def save_scenarios(request):
     entered = [c for c in re.split(r"[\s,]+", request.POST.get("scenarios", "").upper()) if c]
     unknown = [c for c in entered if c not in SCENARIOS]
@@ -97,7 +99,7 @@ def save_scenarios(request):
 
 
 @require_POST
-@admin_required
+@company_required
 def test_connection(request):
     try:
         result = client.call(request.company, "GET", REFERENCE_LISTS["provinces"][0])
@@ -116,7 +118,7 @@ def test_connection(request):
 
 
 @require_POST
-@admin_required
+@company_required
 def download_lists(request):
     try:
         saved, problems = refs.download_all(request.company)
@@ -130,7 +132,7 @@ def download_lists(request):
     return redirect("fbr_setup")
 
 
-@admin_required
+@company_required
 def rate_lookup(request):
     types = refs.rows("transaction_types")
     provinces = refs.rows("provinces")
@@ -152,13 +154,13 @@ def rate_lookup(request):
     return render(request, "fbr/rate_lookup.html", context)
 
 
-@admin_required
+@company_required
 def log_detail(request, pk):
     entry = get_object_or_404(request.company.fbr_logs, pk=pk)
     return render(request, "fbr/log_detail.html", {"entry": entry})
 
 
-@admin_required
+@company_required
 def lookups(request):
     kind = request.GET.get("kind", "")
     query = {k: request.GET.get(k, "").strip() for k in ("hs", "an", "rate", "pr", "sro")}

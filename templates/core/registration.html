@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Registration{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div>
+    <h2>{% if licence.registered %}Registered{% elif licence.expired %}The demo has ended{% else %}Demo: {{ licence.days_left }} day{{ licence.days_left|pluralize }} left{% endif %}</h2>
+    <p class="sub">{% if licence.registered %}This copy is registered to {{ licence.business_name }}, NTN {{ licence.ntn }}. Add the production token in FBR setup to send real invoices.{% else %}Printed invoices say DEMO, and only the FBR sandbox works. The registration file from the developer ends the demo.{% endif %}</p>
+  </div>
+</header>
+{% if not licence.registered %}
+<form method="post" enctype="multipart/form-data" class="app-form" data-loading="Checking the file">
+  {% csrf_token %}
+  <div class="mb-3"><label class="form-label" for="licence">Registration file</label><input class="form-control" id="licence" name="licence" type="file" accept=".json"></div>
+  <button class="btn btn-thread" type="submit">Register</button>
+</form>
+{% endif %}
+{% endblock %}

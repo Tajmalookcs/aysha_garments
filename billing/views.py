@@ -8,7 +8,8 @@ from django.utils import timezone
 
 from django.views.decorators.http import require_POST
 
-from core.decorators import company_required
+from core.decorators import company_required, working_copy_required
+from core.forms import StartNumberForm
 from fbr.sending import mark_not_found_in_iris, record_found_in_iris, send_invoice
 from fbr.views import assigned_scenarios
 
@@ -89,13 +90,21 @@ def _lines_from_post(request, products):
             raise InvoiceError("Choose a product for every item.")
         lines.append(LineInput(
             product=product,
-            sold_by=row.get("sold_by") or ("kg" if product.is_kg else "piece"),
+            sold_by=row.get("sold_by") or _default_sold_by(product),
             quantity=row.get("quantity", ""),
             pieces_per_lot=row.get("pieces_per_lot", ""),
             price=row.get("price", ""),
             discount=row.get("discount", "0"),
+            kg=row.get("kg", ""),
+            pack_unit=row.get("pack_unit", ""),
         ))
     return lines
+
+
+def _default_sold_by(product):
+    if not product.is_kg:
+        return "piece"
+    return "pack" if product.pack_unit else "kg"
 
 
 def _lines_from_invoice(invoice):
@@ -104,6 +113,8 @@ def _lines_from_invoice(invoice):
             "product": item.product_id,
             "sold_by": item.sold_by,
             "quantity": f"{item.entered_quantity.normalize():f}",
+            "kg": f"{item.quantity.normalize():f}" if item.sold_by == "pack" else "",
+            "pack_unit": item.pack_unit,
             "pieces_per_lot": item.pieces_per_lot or "",
             "price": str(item.price_per_piece),
             "discount": str(item.discount),
@@ -169,6 +180,7 @@ def _invoice_form(request, invoice=None, original=None):
         "customers": customers,
         "has_products": products.exists(),
         "next_number": next_invoice_number(company),
+        "can_set_start": invoice is None and original is None and not company.invoices.exists(),
         "today": timezone.localdate().isoformat(),
         "selected_customer": selected_customer,
         "selected_date": selected_date,
@@ -183,6 +195,7 @@ def _invoice_form(request, invoice=None, original=None):
                 "fed": str(p.fed_percent),
                 "hs": p.hs_code,
                 "kg": p.is_kg,
+                "pack_unit": p.pack_unit if p.is_kg else "",
             }
             for p in products
         ],
@@ -191,12 +204,29 @@ def _invoice_form(request, invoice=None, original=None):
     })
 
 
-@company_required
+@require_POST
+@working_copy_required
+def set_start_number(request):
+    """The client's last number from before this app. It closes when the first invoice is made."""
+    if request.company.invoices.exists():
+        messages.error(request, "The last invoice number can only be set before the first invoice.")
+        return redirect("invoice_new")
+    form = StartNumberForm(request.POST)
+    if form.is_valid():
+        request.company.last_invoice_number = form.cleaned_data["last_invoice_number"]
+        request.company.save(update_fields=["last_invoice_number"])
+        messages.success(request, f"New invoices will continue after {request.company.last_invoice_number}.")
+    else:
+        messages.error(request, "Enter the last invoice number as a whole number.")
+    return redirect("invoice_new")
+
+
+@working_copy_required
 def invoice_new(request):
     return _invoice_form(request)
 
 
-@company_required
+@working_copy_required
 def debit_note_new(request, pk):
     original = get_object_or_404(request.company.invoices.prefetch_related("items"), pk=pk)
     if not original.can_add_debit_note:
@@ -205,7 +235,7 @@ def debit_note_new(request, pk):
     return _invoice_form(request, original=original)
 
 
-@company_required
+@working_copy_required
 def invoice_edit(request, pk):
     invoice = get_object_or_404(request.company.invoices.prefetch_related("items"), pk=pk)
     if not invoice.can_edit:
@@ -281,13 +311,22 @@ def sales_register_csv(request):
     return register.csv_response(register.filtered(request.company, start, end, status), start, end)
 
 
+def _copy_for(request, invoice):
+    """Everything printed by a demo copy says so."""
+    copy = invoice.print_copy
+    if request.licence.registered or invoice.is_final:
+        return copy
+    return {**copy, "kind": "demo", "title": "Demo", "stamp": "DEMO",
+            "notice": f"DEMO VERSION. {copy['notice']}"}
+
+
 @company_required
 def invoice_print(request, pk):
     invoice = get_object_or_404(request.company.invoices.prefetch_related("items"), pk=pk)
     return render(request, "billing/invoice_print.html", {
         "invoice": invoice,
         "items": invoice.items.all(),
-        "copy": invoice.print_copy,
+        "copy": _copy_for(request, invoice),
         "qr_svg": irn_svg(invoice.fbr_invoice_number) if invoice.is_final else None,
         "words": amount_in_words(invoice.grand_total),
         "after_discount": invoice.total_excl_tax - invoice.total_discount,
@@ -304,7 +343,7 @@ def _report(request, result):
 
 
 @require_POST
-@company_required
+@working_copy_required
 def invoice_approve(request, pk):
     """Approve and send: the button saved invoices use."""
     invoice = get_object_or_404(request.company.invoices, pk=pk)
@@ -323,7 +362,7 @@ def invoice_approve(request, pk):
 
 
 @require_POST
-@company_required
+@working_copy_required
 def invoice_send(request, pk):
     invoice = get_object_or_404(request.company.invoices, pk=pk)
     if invoice.can_send:

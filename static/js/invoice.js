@@ -12,7 +12,12 @@
   const num = (v) => parseFloat(v) || 0;
   const product = (id) => PRODUCTS.find((p) => p.id === +id);
   /* The quantity goes to FBR in the product's unit, so the choices follow it. */
-  const soldByFor = (p, wanted) => p.kg ? "kg" : (wanted === "lot" ? "lot" : "piece");
+  const PACK_UNITS = ["SET PACK", "PAIR PACK", "PIECE PACK"];
+  const soldByFor = (p, wanted) => {
+    if (!p.kg) return wanted === "lot" ? "lot" : "piece";
+    if (wanted === "kg" || wanted === "pack") return wanted;
+    return p.pack_unit ? "pack" : "kg";
+  };
   const defaultProduct = () => PRODUCTS.find((p) => p.kg) || PRODUCTS[0];
 
   let nextId = 1;
@@ -23,6 +28,8 @@
       product: pid,
       sold_by: soldByFor(product(pid), d && d.sold_by),
       quantity: (d && d.quantity) || "1",
+      kg: (d && d.kg) || "",
+      pack_unit: (d && d.pack_unit) || product(pid).pack_unit || PACK_UNITS[0],
       pieces_per_lot: (d && d.pieces_per_lot) || "",
       price: (d && d.price) || product(pid).price,
       discount: (d && d.discount) || "0",
@@ -34,20 +41,25 @@
     $("lines").innerHTML = lines.map((l) => {
       const opts = PRODUCTS.map((p) => `<option value="${p.id}" ${p.id === l.product ? "selected" : ""}>${esc(p.name)}</option>`).join("");
       const isKg = l.sold_by === "kg";
-      const soldBy = isKg
-        ? `<option value="kg" selected>KG</option>`
+      const isPack = l.sold_by === "pack";
+      const soldBy = product(l.product).kg
+        ? `<option value="pack" ${isPack ? "selected" : ""}>Pack and KG</option><option value="kg" ${isKg ? "selected" : ""}>KG</option>`
         : `<option value="piece" ${l.sold_by === "piece" ? "selected" : ""}>Piece</option><option value="lot" ${l.sold_by === "lot" ? "selected" : ""}>Lot</option>`;
       const lot = l.sold_by === "lot"
         ? `<div class="lot-pieces"><label class="form-label" for="pl${l.id}">Pieces in each lot</label><input class="form-control num" id="pl${l.id}" data-l="${l.id}" data-f="pieces_per_lot" type="number" min="1" step="1" value="${esc(l.pieces_per_lot)}"></div>`
         : "";
+      const pack = isPack
+        ? `<div class="pack-unit"><label class="form-label" for="pu${l.id}">Pack unit</label><select class="form-select" id="pu${l.id}" data-l="${l.id}" data-f="pack_unit">${PACK_UNITS.map((u) => `<option ${u === l.pack_unit ? "selected" : ""}>${u}</option>`).join("")}</select></div>
+           <div class="pack-kg"><label class="form-label" for="kg${l.id}">KG (goes to FBR)</label><input class="form-control num" id="kg${l.id}" data-l="${l.id}" data-f="kg" type="number" min="0" step="any" value="${esc(l.kg)}"></div>`
+        : "";
       return `<div class="line">
         <div class="f-product"><label class="form-label" for="pr${l.id}">Product</label><select class="form-select" id="pr${l.id}" data-l="${l.id}" data-f="product">${opts}</select></div>
         <div><label class="form-label" for="un${l.id}">Sold by</label><select class="form-select" id="un${l.id}" data-l="${l.id}" data-f="sold_by">${soldBy}</select></div>
-        <div><label class="form-label" for="qt${l.id}">${isKg ? "Quantity (KG)" : "Quantity"}</label><input class="form-control num" id="qt${l.id}" data-l="${l.id}" data-f="quantity" type="number" min="0" step="any" value="${esc(l.quantity)}"></div>
-        <div><label class="form-label" for="dp${l.id}">${isKg ? "Price per KG" : "Price per piece"}</label><input class="form-control num" id="dp${l.id}" data-l="${l.id}" data-f="price" type="number" min="0" step="0.01" value="${esc(l.price)}"></div>
+        <div><label class="form-label" for="qt${l.id}">${isKg ? "Quantity (KG)" : (isPack ? "Packs" : "Quantity")}</label><input class="form-control num" id="qt${l.id}" data-l="${l.id}" data-f="quantity" type="number" min="0" step="any" value="${esc(l.quantity)}"></div>
+        <div><label class="form-label" for="dp${l.id}">${isKg ? "Price per KG" : (isPack ? "Rate per pack" : "Price per piece")}</label><input class="form-control num" id="dp${l.id}" data-l="${l.id}" data-f="price" type="number" min="0" step="0.01" value="${esc(l.price)}"></div>
         <div><label class="form-label" for="dc${l.id}">Discount</label><input class="form-control num" id="dc${l.id}" data-l="${l.id}" data-f="discount" type="number" min="0" step="0.01" value="${esc(l.discount)}"></div>
         <button class="rm" type="button" data-rm="${l.id}" aria-label="Remove this item" ${lines.length === 1 ? "disabled" : ""}><i class="bi bi-x-lg"></i></button>
-        ${lot}
+        ${lot}${pack}
         <div class="line-meta"><span id="meta${l.id}"></span><strong id="amt${l.id}"></strong></div>
       </div>`;
     }).join("");
@@ -57,7 +69,7 @@
   /* On-screen totals only. The server works out the saved figures with Decimal. */
   function calc() {
     const kind = KINDS[$("buyer").value];
-    let excl = 0, st = 0, ft = 0, disc = 0;
+    let excl = 0, st = 0, ft = 0, disc = 0, kg = 0;
     lines.forEach((l) => {
       const p = product(l.product);
       const pieces = num(l.quantity) * (l.sold_by === "lot" ? num(l.pieces_per_lot) : 1);
@@ -68,10 +80,14 @@
       const fed = Math.round((v - d) * num(p.fed) / 100);
       excl += v; st += s + fed; ft += f; disc += d;
       const meta = $("meta" + l.id), amt = $("amt" + l.id);
-      const unit = l.sold_by === "kg" ? "KG" : (pieces === 1 ? "piece" : "pieces");
-      if (meta) meta.textContent = `${pieces.toLocaleString("en-PK")} ${unit}, HS ${p.hs}, rate ${num(p.rate)}%`;
+      const unit = l.sold_by === "kg" ? "KG" : (l.sold_by === "pack" ? l.pack_unit : (pieces === 1 ? "piece" : "pieces"));
+      const weight = l.sold_by === "pack" ? `, ${num(l.kg).toLocaleString("en-PK")} KG` : "";
+      kg += l.sold_by === "pack" ? num(l.kg) : (l.sold_by === "kg" ? pieces : 0);
+      if (meta) meta.textContent = `${pieces.toLocaleString("en-PK")} ${unit}${weight}, HS ${p.hs}, rate ${num(p.rate)}%`;
       if (amt) amt.textContent = rs(v + s + f + fed - d);
     });
+    $("tKgRow").style.display = kg ? "" : "none";
+    $("tKg").textContent = kg.toLocaleString("en-PK") + " KG";
     $("tExcl").textContent = rs(excl);
     $("tST").textContent = rs(st);
     $("tFT").textContent = rs(ft);
@@ -84,7 +100,7 @@
     const t = e.target, l = lines.find((x) => x.id === +t.dataset.l);
     if (!l) return;
     const f = t.dataset.f;
-    if (f === "product") { l.product = +t.value; l.price = product(l.product).price; l.sold_by = soldByFor(product(l.product), l.sold_by); render(); }
+    if (f === "product") { l.product = +t.value; l.price = product(l.product).price; const p = product(l.product); l.sold_by = soldByFor(p, p.kg ? null : l.sold_by); l.pack_unit = p.pack_unit || l.pack_unit; render(); }
     else if (f === "sold_by") { l.sold_by = t.value; render(); }
     else { l[f] = t.value; calc(); }
   });
@@ -101,6 +117,7 @@
     $("linesField").value = JSON.stringify(lines.map((l) => ({
       product: l.product, sold_by: l.sold_by, quantity: l.quantity,
       pieces_per_lot: l.pieces_per_lot, price: l.price, discount: l.discount,
+      kg: l.kg, pack_unit: l.pack_unit,
     })));
   });
 

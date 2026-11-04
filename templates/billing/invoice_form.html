@@ -6,10 +6,21 @@
   {% elif invoice %}<div><h2>Edit invoice {{ invoice.number }}</h2><p class="sub">Save your changes, then approve it to send it to FBR.</p></div>
   {% else %}<div><h2>New invoice</h2><p class="sub">Invoice {{ next_number }}. Save it here first, then approve it to send it to FBR.</p></div>{% endif %}
 </header>
+{% if can_set_start %}
+<form method="post" action="{% url 'set_start_number' %}" class="start-number" data-loading="Saving">
+  {% csrf_token %}
+  <label class="form-label" for="startNumber">Last invoice number from before this app</label>
+  <div class="start-number-row">
+    <input class="form-control num" id="startNumber" name="last_invoice_number" type="number" min="0" step="1" value="{{ company.last_invoice_number }}">
+    <button class="btn btn-outline-thread" type="submit">Save number</button>
+  </div>
+  <p class="sub small mb-0">New invoices continue after this number. You can change it until the first invoice is saved.</p>
+</form>
+{% endif %}
 {% if not has_products or not customers %}
 <div class="empty">
   <p class="mb-0">{% if not has_products %}Add a product{% if not customers %} and a customer{% endif %}{% else %}Add a customer{% endif %} before making an invoice.</p>
-  {% if not has_products and is_admin %}<a class="btn btn-thread" href="{% url 'product_new' %}">Add a product</a>{% elif not has_products %}<p class="mb-0">Ask an admin to add products.</p>{% else %}<a class="btn btn-thread" href="{% url 'customer_new' %}">Add a customer</a>{% endif %}
+  {% if not has_products %}<a class="btn btn-thread" href="{% url 'product_new' %}">Add a product</a>{% else %}<a class="btn btn-thread" href="{% url 'customer_new' %}">Add a customer</a>{% endif %}
 </div>
 {% else %}
 <form method="post" id="invForm" class="invoice-grid" novalidate data-loading="Saving on this computer">
@@ -24,8 +35,8 @@
         </select></div>
       <div class="col-md-3"><label class="form-label" for="date">Invoice date</label>
         <input class="form-control" id="date" name="invoice_date" type="date" value="{{ selected_date|default:today }}"></div>
-      <div class="col-md-4"><label class="form-label" for="ref">Your reference (optional)</label>
-        <input class="form-control" id="ref" name="your_reference" value="{{ your_reference }}" maxlength="100" placeholder="Order no."></div>
+      <div class="col-md-4"><label class="form-label" for="ref">Job no. (optional)</label>
+        <input class="form-control" id="ref" name="your_reference" value="{{ your_reference }}" maxlength="100" placeholder="Job no."></div>
     </div>
     <p id="exportNote" class="export-note" hidden><i class="bi bi-exclamation-triangle"></i> Export invoices can be saved but not sent yet. FBR's rules for foreign buyers, and the tax shown here, still need to be confirmed.</p>
     <div id="lines"></div>
@@ -34,6 +45,7 @@
   <aside class="summary">
     <h3>Invoice total</h3>
     <dl>
+      <div id="tKgRow"><dt>Total weight</dt><dd id="tKg"></dd></div>
       <div><dt>Value before discount</dt><dd id="tExcl"></dd></div>
       <div><dt>Discount</dt><dd id="tDisc"></dd></div>
       <div><dt>Sales tax</dt><dd id="tST"></dd></div>

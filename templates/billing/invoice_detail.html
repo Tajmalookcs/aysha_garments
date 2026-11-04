@@ -4,7 +4,7 @@
 <header class="page-head">
   <div>
     <h2>{% if invoice.is_debit_note %}Debit note{% else %}Invoice{% endif %} {{ invoice.number }}</h2>
-    <p class="sub"><span class="status {{ invoice.status_class }}">{{ invoice.status_label }}</span></p>
+    <p class="sub">{% if not licence.registered and not invoice.is_final %}<span class="demo-tag">DEMO</span> {% endif %}<span class="status {{ invoice.status_class }}">{{ invoice.status_label }}</span></p>
   </div>
   <div class="invoice-actions">
     <a class="btn btn-outline-thread btn-lg" id="printLink" href="{% url 'invoice_print' invoice.pk %}">{% if invoice.is_final %}Print invoice{% else %}Print copy{% endif %}</a>
@@ -57,21 +57,22 @@
 
 <div class="detail-grid">
   <div><h3>Seller</h3><p>{{ invoice.seller_name }}</p><p>{{ invoice.seller_address }}</p><p>{{ invoice.seller_province }}</p>{% if invoice.seller_ntn %}<p>NTN: {{ invoice.seller_ntn }}</p>{% endif %}</div>
-  <div><h3>Buyer</h3><p>{{ invoice.buyer_name }} ({{ invoice.get_buyer_kind_display }})</p><p>{{ invoice.buyer_address }}</p><p>{% if invoice.buyer_country %}{{ invoice.buyer_country }}{% else %}{{ invoice.buyer_province }}{% endif %}</p>{% if invoice.buyer_ntn_cnic %}<p>NTN or CNIC: {{ invoice.buyer_ntn_cnic }}</p>{% endif %}</div>
-  <div><h3>Invoice</h3><p>Date: {{ invoice.invoice_date|date:"d M Y" }}</p>{% if invoice.your_reference %}<p>Your reference: {{ invoice.your_reference }}</p>{% endif %}<p>IRN: {{ invoice.fbr_invoice_number|default:"Not issued yet" }}</p>{% if invoice.scenario_id %}<p>Scenario: {{ invoice.scenario_id }}</p>{% endif %}</div>
+  <div><h3>Buyer</h3><p>{{ invoice.buyer_name }} ({{ invoice.get_buyer_kind_display }})</p><p>{{ invoice.buyer_address }}</p><p>{% if invoice.buyer_country %}{{ invoice.buyer_country }}{% else %}{{ invoice.buyer_province }}{% endif %}</p>{% if invoice.buyer_ntn_cnic %}<p>NTN or CNIC: {{ invoice.buyer_ntn_cnic }}</p>{% endif %}{% if invoice.buyer_strn %}<p>STRN: {{ invoice.buyer_strn }}</p>{% endif %}</div>
+  <div><h3>Invoice</h3><p>Date: {{ invoice.invoice_date|date:"d M Y" }}</p>{% if invoice.your_reference %}<p>Job no.: {{ invoice.your_reference }}</p>{% endif %}<p>IRN: {{ invoice.fbr_invoice_number|default:"Not issued yet" }}</p>{% if invoice.scenario_id %}<p>Scenario: {{ invoice.scenario_id }}</p>{% endif %}</div>
 </div>
 
-<div class="table-responsive"><table class="table ledger align-middle">
-  <thead><tr><th>Item</th><th>HS code</th><th class="text-end">Quantity</th><th class="text-end">Price per unit</th><th class="text-end">Value</th><th class="text-end">Discount</th><th class="text-end">Rate</th><th class="text-end">Sales tax</th><th class="text-end">Further tax</th><th class="text-end">Total</th></tr></thead>
+<div class="table-responsive"><table class="table ledger align-middle{% if invoice.has_pack_lines %} ledger-wide{% endif %}">
+  <thead><tr><th>Item</th><th>HS code</th><th class="text-end">Quantity</th>{% if invoice.has_pack_lines %}<th class="text-end">KG</th>{% endif %}<th class="text-end">Price per unit</th><th class="text-end">Value</th><th class="text-end">Discount</th><th class="text-end">Rate</th><th class="text-end">Sales tax</th>{% if invoice.total_further_tax %}<th class="text-end">Further tax</th>{% endif %}<th class="text-end">Total</th></tr></thead>
   <tbody>{% for l in invoice.items.all %}<tr>
     <td>{{ l.description }}{% if l.sold_by == 'lot' %}<div class="sub small">{{ l.entered_quantity|floatformat:"-4" }} lots of {{ l.pieces_per_lot }}</div>{% endif %}</td>
-    <td>{{ l.hs_code }}</td><td class="text-end num">{{ l.quantity|floatformat:"-4" }} {{ l.quantity_unit }}</td><td class="text-end num">{{ l.price_per_piece|rupees }}</td>
+    <td>{{ l.hs_code }}</td><td class="text-end num">{{ l.display_quantity|floatformat:"-4g" }} {{ l.display_unit }}</td>{% if invoice.has_pack_lines %}<td class="text-end num">{% if l.quantity_unit == "KG" %}{{ l.quantity|floatformat:"-4g" }}{% endif %}</td>{% endif %}<td class="text-end num">{{ l.price_per_piece|rupees }}</td>
     <td class="text-end num">{{ l.value_excl_tax|rupees }}</td><td class="text-end num">{{ l.discount|rupees }}</td><td class="text-end num">{{ l.rate_label }}</td><td class="text-end num">{{ l.sales_tax|rupees }}</td>
-    <td class="text-end num">{{ l.further_tax|rupees }}</td><td class="text-end num">{{ l.total|rupees }}</td>
+    {% if invoice.total_further_tax %}<td class="text-end num">{{ l.further_tax|rupees }}</td>{% endif %}<td class="text-end num">{{ l.total|rupees }}</td>
   </tr>{% endfor %}</tbody>
 </table></div>
 
 <div class="totals">
+  {% if invoice.total_kg %}<div><span>Total weight</span><span>{{ invoice.total_kg|floatformat:"-4g" }} KG</span></div>{% endif %}
   <div><span>Value before discount</span><span>Rs {{ invoice.total_excl_tax|rupees }}</span></div>
   <div><span>Discount</span><span>- Rs {{ invoice.total_discount|rupees }}</span></div>
   <div><span>Sales tax</span><span>Rs {{ invoice.total_sales_tax|rupees }}</span></div>

@@ -10,11 +10,12 @@ from django.db import transaction
 from django.utils import timezone
 
 from billing.models import Invoice
+from core import licence
 
 from . import client
 from .constants import POST_PATH, VALIDATE_PATH
 from .parsing import INVALID, VALID, parse
-from .payload import build_payload
+from .payload import build_payload, group_items
 
 
 @dataclass
@@ -39,6 +40,11 @@ def _mark_offline(invoice):
 def send_invoice(invoice) -> SendResult:
     company = invoice.company
     mode = company.fbr_mode
+    state = licence.status(company)
+    if state.expired:
+        return SendResult(False, "The demo has ended, so invoices can't be sent. Register this copy to continue.")
+    if mode == "production" and not state.registered:
+        return SendResult(False, "Production needs a registered copy. Register this copy first.")
     if mode == "sandbox" and not invoice.scenario_id:
         return SendResult(False, "Choose a scenario before sending to the sandbox.")
     if invoice.your_reference.startswith("DEMO"):
@@ -121,11 +127,13 @@ def _accept(invoice, parsed):
     invoice.last_error_code = ""
     invoice.last_error = ""
     invoice.save()
-    for item in invoice.items.all():
-        number = parsed.item_numbers.get(str(item.line_no), "")
+    # FBR numbers the items as they were sent, and combined lines share one item.
+    for position, lines in enumerate(group_items(invoice.items.all()), start=1):
+        number = parsed.item_numbers.get(str(position), "")
         if number:
-            item.fbr_invoice_no = number
-            item.save(update_fields=["fbr_invoice_no"])
+            for item in lines:
+                item.fbr_invoice_no = number
+                item.save(update_fields=["fbr_invoice_no"])
 
 
 def record_found_in_iris(invoice, irn: str) -> SendResult:

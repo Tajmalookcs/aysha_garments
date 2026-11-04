@@ -36,9 +36,15 @@ class Company(models.Model):
     address = models.TextField()
     phone = models.CharField(max_length=60, blank=True)
     invoice_prefix = models.CharField(
-        max_length=10, default="INV", validators=[prefix_validator],
-        help_text="Invoice numbers will look like AG-000001.",
+        max_length=10, default="", blank=True, validators=[prefix_validator],
+        help_text="Leave blank for plain numbers like 119. With AG, numbers look like AG-000001.",
     )
+    last_invoice_number = models.PositiveIntegerField(
+        default=0, blank=True,
+        help_text="The last number you issued before this app. New invoices continue after it.",
+    )
+    demo_started_on = models.DateField(null=True, blank=True, editable=False)
+    demo_last_seen = models.DateField(null=True, blank=True, editable=False)
     sandbox_scenarios = models.CharField(max_length=200, blank=True)
     fbr_mode = models.CharField(max_length=10, default="sandbox", editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -73,8 +79,11 @@ class Membership(models.Model):
         return f"{self.user} at {self.company} ({self.role})"
 
 
+PACK_UNITS = [("SET PACK", "SET PACK"), ("PAIR PACK", "PAIR PACK"), ("PIECE PACK", "PIECE PACK")]
+
+
 class Product(models.Model):
-    """Tax details live here so operators never type them on an invoice."""
+    """Tax details live here so they aren't typed on every invoice."""
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="products")
     name = models.CharField(max_length=200)
@@ -84,6 +93,10 @@ class Product(models.Model):
     )
     hs_code = models.CharField("HS code", max_length=9, validators=[hs_code_validator])
     uom = models.CharField("Unit reported to FBR", max_length=100, help_text="Must be a unit FBR allows for this HS code.")
+    pack_unit = models.CharField(
+        max_length=20, blank=True, choices=PACK_UNITS,
+        help_text="For KG products charged by the pack. The invoice line then has packs, a rate per pack and KG, and only the KG goes to FBR. Leave blank for plain KG.",
+    )
     sale_type = models.CharField(max_length=150, help_text="The FBR sale type for this product.")
     rate_label = models.CharField(
         "Rate as FBR writes it", max_length=100,
@@ -135,6 +148,7 @@ class Customer(models.Model):
         "NTN or CNIC", max_length=13, blank=True, validators=[buyer_reg_validator],
         help_text="Required for registered buyers. 7, 9 or 13 digits, with no dashes.",
     )
+    strn = models.CharField("STRN", max_length=30, blank=True, help_text="Sales tax registration number. It prints on the invoice and doesn't go to FBR.")
     province = models.CharField(max_length=60, blank=True, help_text="Required unless the buyer is foreign.")
     country = models.CharField(max_length=60, blank=True, help_text="For foreign buyers.")
     address = models.TextField(blank=True)

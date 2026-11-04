@@ -11,6 +11,7 @@ from django.urls import reverse
 from billing.models import Invoice
 from billing.services import LineInput, approve_invoice, create_invoice
 from core.models import Company, Customer, Membership, Product
+from core.testing import register_copy
 from fbr.constants import POST_SANDBOX, VALIDATE_SANDBOX
 from fbr.models import FbrApiLog, FbrCredential, RefList
 from fbr.parsing import INVALID, UNCLEAR, VALID, parse
@@ -125,6 +126,17 @@ class PayloadTests(Base):
 
 @patch("fbr.client.requests.request")
 class SendingTests(Base):
+    def test_combined_lines_share_the_number_fbr_gives_their_item(self, req):
+        req.side_effect = [reply(VALID_CHECK), reply(VALID_POST)]
+        kg = Product.objects.create(company=self.company, name="Duvet", hs_code="9404.9000", uom="KG", pack_unit="SET PACK", sale_type="Sample", rate_label="18%", rate_percent=Decimal("18"), price_per_piece=Decimal("85"))
+        lines = [LineInput(kg, "pack", "100", "", "85", "0", kg="300", pack_unit="SET PACK"), LineInput(kg, "pack", "200", "", "95", "0", kg="700", pack_unit="SET PACK")]
+        inv = approve_invoice(create_invoice(company=self.company, customer=self.reg, invoice_date=date(2026, 11, 2), lines=lines), self.user, "SN001")
+        self.assertTrue(send_invoice(inv).ok)
+        sent = json.loads(req.call_args_list[1].kwargs["data"])
+        self.assertEqual(len(sent["items"]), 1)
+        self.assertEqual(sent["items"][0]["quantity"], 1000.0)
+        self.assertEqual({i.fbr_invoice_no for i in inv.items.all()}, {"7000007DI1747119701593-1"})
+
     def test_accepted_flow_validates_then_posts(self, req):
         req.side_effect = [reply(VALID_CHECK), reply(VALID_POST)]
         inv = self.approved()
@@ -353,6 +365,10 @@ class ScreenTests(Base):
 
 @patch("fbr.client.requests.request")
 class ProductionModeTests(Base):
+    def setUp(self):
+        super().setUp()
+        register_copy(self, self.company)
+
     def _production(self):
         cred = FbrCredential(company=self.company, environment="production")
         cred.token = "prod-token-abcdefgh"

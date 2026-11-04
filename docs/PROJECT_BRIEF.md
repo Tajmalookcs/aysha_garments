@@ -4,7 +4,8 @@
 
 - What we are building: a new FBR digital invoicing system for manufacturing units
 - First client: Ayesha Garments (`AYESHA GARMENTS` is the name sent to FBR)
-- Several clients: the system must support more than one company
+- Several clients: each client gets its own installation, with one company and one user. One installation is never shared between clients
+- New installations run as a 15 day demo until the client's registration file is added
 - Scope: invoicing only for now; more can be added if a client asks
 - Selling: pieces and lots, to registered and unregistered buyers, and for export
 - Offline: all design assets are stored locally; invoices are saved locally and uploaded when internet returns
@@ -25,7 +26,7 @@
 
 - Integrator: PRAL
 - Technical details submitted; IP whitelisting pending with PRAL; sandbox token issued
-- First client's business, confirmed by the client on 2026-11-04: processing and conversion only, no export. Its IRIS profile says Manufacturer and Exporter, which still needs checking.
+- First client's business, confirmed by the client on 2026-11-04: processing and conversion only, no export. It takes in and returns cloth by weight, charges by the set or pack, and gives each job a number. The client says its HS code is reported to FBR in KG. Its IRIS profile says Manufacturer and Exporter, which still needs checking.
 - Assigned sandbox scenarios (9): SN001, SN002, SN005, SN006, SN007, SN009, SN016, SN017, SN024
 - Client identity details, the IP, tokens and passwords are deliberately not stored in this repository
 

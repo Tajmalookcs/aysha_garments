@@ -2,9 +2,8 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import redirect
 from django.urls import reverse
 
+from . import licence
 from .models import Membership
-
-SESSION_KEY = "company_id"
 
 
 class FirstRunMiddleware:
@@ -22,23 +21,26 @@ class FirstRunMiddleware:
 
 
 class ActiveCompanyMiddleware:
-    """Set request.company and request.role from the user's own memberships only."""
+    """Each install has one company, reached only through the user's own membership."""
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         request.company = None
-        request.role = None
-        request.memberships = []
         if request.user.is_authenticated:
-            memberships = list(Membership.objects.filter(user=request.user).select_related("company"))
-            request.memberships = memberships
-            chosen = request.session.get(SESSION_KEY)
-            active = next((m for m in memberships if m.company_id == chosen), None)
-            if active is None and memberships:
-                active = memberships[0]
-            if active:
-                request.company = active.company
-                request.role = active.role
+            membership = Membership.objects.filter(user=request.user).select_related("company").first()
+            if membership:
+                request.company = membership.company
+        return self.get_response(request)
+
+
+class LicenceMiddleware:
+    """Work out whether this copy is a demo, and how long it has left."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request.licence = licence.status(request.company) if request.company else None
         return self.get_response(request)
