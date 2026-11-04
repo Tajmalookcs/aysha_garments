@@ -1,0 +1,188 @@
+{
+  "products": [
+    {
+      "name": "EXAMPLE PRODUCT, CHARGED BY THE PACK",
+      "hs_code": "0000.0000",
+      "uom": "KG",
+      "pack_unit": "SET PACK",
+      "sale_type": "Copy from FBR's list",
+      "rate_label": "Copy from FBR's rate lookup",
+      "rate_percent": 0,
+      "further_tax_percent": 0,
+      "price_per_piece": 0
+    }
+  ],
+  "buyers": [
+    {
+      "name": "EXAMPLE REGISTERED BUYER",
+      "kind": "registered",
+      "ntn_cnic": "0000000",
+      "strn": "0000000000000",
+      "province": "PUNJAB",
+      "address": "Example Road, Faisalabad"
+    }
+  ],
+  "test_products": [
+    {
+      "name": "TEST STANDARD RATE",
+      "sale_type": "Goods at standard rate (default)",
+      "price_per_piece": 100,
+      "hs_code": "6302.3990",
+      "uom": "KG",
+      "rate_label": "18%",
+      "rate_percent": 18,
+      "further_tax_percent": 4
+    },
+    {
+      "name": "TEST REDUCED RATE",
+      "sale_type": "Goods at Reduced Rate",
+      "rate_label": "1%",
+      "rate_percent": 1,
+      "hs_code": "6302.3990",
+      "uom": "KG",
+      "further_tax_percent": 0,
+      "price_per_piece": 100,
+      "sro_schedule_no": "EIGHTH SCHEDULE Table 1",
+      "sro_item_serial_no": "70"
+    },
+    {
+      "name": "TEST EXEMPT",
+      "sale_type": "Exempt goods",
+      "rate_label": "Exempt",
+      "rate_percent": 0,
+      "hs_code": "6302.3990",
+      "uom": "KG",
+      "further_tax_percent": 0,
+      "price_per_piece": 100,
+      "sro_schedule_no": "6th Schd Table I",
+      "sro_item_serial_no": "100"
+    },
+    {
+      "name": "TEST ZERO RATE",
+      "sale_type": "Goods at zero-rate",
+      "rate_label": "0%",
+      "rate_percent": 0,
+      "hs_code": "6302.3990",
+      "uom": "KG",
+      "further_tax_percent": 0,
+      "price_per_piece": 100,
+      "sro_schedule_no": "FIFTH SCHEDULE",
+      "sro_item_serial_no": "1(i)"
+    },
+    {
+      "name": "TEST COTTON GINNERS",
+      "sale_type": "Cotton ginners",
+      "rate_label": "18%",
+      "rate_percent": 18,
+      "hs_code": "6302.3990",
+      "uom": "KG",
+      "further_tax_percent": 0,
+      "price_per_piece": 100
+    },
+    {
+      "name": "TEST FED IN ST MODE",
+      "sale_type": "Goods (FED in ST Mode)",
+      "rate_label": "18% and Rs. 80 per Liter",
+      "rate_percent": 118,
+      "hs_code": "2710.1240",
+      "uom": "Liter",
+      "further_tax_percent": 0,
+      "price_per_piece": 100
+    },
+    {
+      "name": "TEST SRO 297",
+      "sale_type": "Goods as per SRO.297(|)/2023",
+      "rate_label": "25%",
+      "rate_percent": 25,
+      "hs_code": "6302.3990",
+      "uom": "KG",
+      "further_tax_percent": 0,
+      "price_per_piece": 100,
+      "sro_schedule_no": "297(I)/2023-Table-I",
+      "sro_item_serial_no": "12"
+    },
+    {
+      "name": "TEST PROCESSING",
+      "sale_type": "Processing/Conversion of Goods",
+      "rate_label": "18%",
+      "rate_percent": 18,
+      "hs_code": "6302.3990",
+      "uom": "KG",
+      "further_tax_percent": 0,
+      "price_per_piece": 100
+    }
+  ],
+  "test_buyers": [
+    {
+      "name": "TEST UNREGISTERED BUYER",
+      "kind": "unregistered",
+      "province": "PUNJAB",
+      "address": "Test Address, Faisalabad"
+    }
+  ],
+  "test_invoices": [
+    {
+      "scenario": "SN001",
+      "buyer": "EXAMPLE REGISTERED BUYER",
+      "product": "TEST STANDARD RATE",
+      "quantity": "100",
+      "price": "100"
+    },
+    {
+      "scenario": "SN002",
+      "buyer": "TEST UNREGISTERED BUYER",
+      "product": "TEST STANDARD RATE",
+      "quantity": "100",
+      "price": "100"
+    },
+    {
+      "scenario": "SN005",
+      "buyer": "EXAMPLE REGISTERED BUYER",
+      "product": "TEST REDUCED RATE",
+      "quantity": "100",
+      "price": "100"
+    },
+    {
+      "scenario": "SN006",
+      "buyer": "EXAMPLE REGISTERED BUYER",
+      "product": "TEST EXEMPT",
+      "quantity": "100",
+      "price": "100"
+    },
+    {
+      "scenario": "SN007",
+      "buyer": "EXAMPLE REGISTERED BUYER",
+      "product": "TEST ZERO RATE",
+      "quantity": "100",
+      "price": "100"
+    },
+    {
+      "scenario": "SN009",
+      "buyer": "EXAMPLE REGISTERED BUYER",
+      "product": "TEST COTTON GINNERS",
+      "quantity": "100",
+      "price": "100"
+    },
+    {
+      "scenario": "SN017",
+      "buyer": "EXAMPLE REGISTERED BUYER",
+      "product": "TEST FED IN ST MODE",
+      "quantity": "1",
+      "price": "100"
+    },
+    {
+      "scenario": "SN024",
+      "buyer": "EXAMPLE REGISTERED BUYER",
+      "product": "TEST SRO 297",
+      "quantity": "100",
+      "price": "100"
+    },
+    {
+      "scenario": "SN016",
+      "buyer": "EXAMPLE REGISTERED BUYER",
+      "product": "TEST PROCESSING",
+      "quantity": "100",
+      "price": "100"
+    }
+  ]
+}

@@ -221,4 +221,8 @@ class InvoiceItem(models.Model):
 
     @property
     def display_unit(self):
-        return self.pack_unit if self.sold_by == self.SoldBy.PACK else self.quantity_unit
+        if self.sold_by == self.SoldBy.PACK:
+            return self.pack_unit
+        if self.sold_by == self.SoldBy.PIECE and self.uom.strip().lower() not in {"", "numbers, pieces, units"}:
+            return self.uom
+        return self.quantity_unit

@@ -206,7 +206,7 @@ The first client charges by the set or pack, but reports KG to FBR, because that
 - Companies can enter their last invoice number. New invoices take the lowest free number after it, so a deleted number is used again. A blank prefix gives plain numbers like 119.
 
 ### Decisions needed
-- Does FBR accept the combined item? The owner will check this in the sandbox.
+- Does FBR accept the combined item? Yes in the sandbox: the owner's SN016 test on 2026-11-04 was accepted with three pack lines sent as one item.
 
 ### Outcome
 Built and tested locally with a fake server.
@@ -234,10 +234,64 @@ Each client gets a separate install, used by one person. New installs run as a d
 - Someone who can change the code can remove these checks. The code runs on the client's computer.
 
 ### Decisions needed
-- The owner still has to run `setup_licensing` and add `licensing/demo.json` and `licensing/public_key.pem` to the repository. Until then, new installs can't be set up.
+- Done on 2026-11-05: the owner ran `setup_licensing`, and `licensing/demo.json` and `licensing/public_key.pem` were added to the repository.
 
 ### Outcome
 Built and tested locally with a fake server.
+
+## Build H: Seed data and STRN display
+
+Status: Done locally on 2026-11-05. Not yet tested against FBR.
+Date proposed: 2026-11-04
+Date approved: 2026-11-04. The owner asked for the STRN display on 2026-11-05.
+
+### Goal
+Add the first client's records in one step, and a saved test invoice for each sandbox scenario still to run.
+
+### Work
+- `add_seed_data` and `add_seed_data.bat` read a local file, `instance/seed_data.json`. It holds tax numbers, so it's never pushed.
+- It adds the client's products and buyer, then test products, a test buyer and saved test invoices. Their job number starts with TEST-, and their scenario is already chosen.
+- It keeps existing records and can run more than once. It adds no test records outside sandbox mode, or with `--real-only`. It sends nothing to FBR.
+- STRN is saved with no dashes. Dashes show only on the invoice screen and in print.
+- Tests use made-up data and no FBR connection.
+
+### Scenarios
+- In the data file: SN001, SN002, SN005, SN006, SN007, SN009, SN017 and SN024. Sale types are from FBR's list. Rates, SRO schedules and item numbers are from the owner's FBR lookups on 2026-11-05.
+- Where FBR offered several SROs or items, the test uses one of them. These are test values only, and say nothing about the client's real sales.
+- HS codes for these tests start with the client's code, and change if FBR refuses it.
+- SN017: HS code 2710.1240, unit Liter, quantity 1, value 100 and sales tax 118 passed in the sandbox. These values came from a Manager.io forum post, not an official document. FBR refused 18% plus Rs. 80 per liter worked out on 100 liters (error 0131). The formula is unconfirmed, so it isn't a rule for real invoices.
+
+### Decisions needed
+- None.
+
+### Outcome
+Built and tested locally without any FBR connection. SN001 and SN002 were accepted in the sandbox on 2026-11-05. SN005, SN006, SN007, SN009, SN017 and SN024 were accepted too, so all 9 assigned scenarios have passed the sandbox.
+
+## Build I: Show the FBR unit on piece lines
+
+Status: Done locally on 2026-11-05.
+Date proposed: 2026-11-05
+Date approved: 2026-11-05
+
+### Goal
+The owner saw a product in Liter shown as "100 pieces" on its invoice.
+
+### Work
+- A line sold by piece now shows the product's FBR unit on the invoice screen and in print, such as "100 Liter".
+- Numbers, pieces, units still shows as piece or pieces, because the full name is long. Lots stay as they were.
+- Tax and what goes to FBR don't change.
+
+### Outcome
+Built and tested locally without any FBR connection.
+
+## Build J: New client setup guide
+
+Status: Done on 2026-11-05. The owner asked for it directly.
+
+### Work
+- `docs/CLIENT_SETUP_GUIDE.md` records the steps, the sandbox values that passed and the lessons, so the next client takes less time.
+- `docs/seed_data.example.json` is a starting point with made-up details.
+- `licensing/demo.json` and `licensing/public_key.pem` added, so new installs can be set up.
 
 ## Later builds (not approved yet)
 

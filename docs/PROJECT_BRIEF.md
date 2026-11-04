@@ -28,14 +28,19 @@
 - Technical details submitted; IP whitelisting pending with PRAL; sandbox token issued
 - First client's business, confirmed by the client on 2026-11-04: processing and conversion only, no export. It takes in and returns cloth by weight, charges by the set or pack, and gives each job a number. The client says its HS code is reported to FBR in KG. Its IRIS profile says Manufacturer and Exporter, which still needs checking.
 - Assigned sandbox scenarios (9): SN001, SN002, SN005, SN006, SN007, SN009, SN016, SN017, SN024
+- Sandbox progress on 2026-11-05: all 9 assigned scenarios were accepted by the sandbox. The IP still showed Pending in IRIS at the last check.
+- STRN: saved as 13 digits with no dashes. Invoices show it as 00-00-0000-000-00.
 - Client identity details, the IP, tokens and passwords are deliberately not stored in this repository
 
 ## Open questions
 
 1. How is a foreign buyer reported to FBR? Export invoices must not be treated as ready until this is confirmed. The first client told us on 2026-11-04 that it doesn't export, so this matters only for later clients.
-2. Product list with HS codes, units, prices and tax rates, from the client. The client's September 2026 FBR report shows one kind of sale in KG, and the client confirmed on 2026-11-04 that it does conversion only. Still to confirm: whether the same HS code is always used.
+2. Product list with HS codes, units, prices and tax rates, from the client. The client's September 2026 FBR report shows one kind of sale in KG, and the client confirmed on 2026-11-04 that it does conversion only. The September report and invoices show four items (duvet set, sheet set, fitted, pillow), all under one HS code at 18%. Still to confirm: whether the same HS code is always used, and each line's KG, because the client's invoices show KG only for the whole invoice.
+8. Does further tax apply to the client's processing and conversion sales to unregistered buyers? The Sales Tax Act section 3(1A) sets 4%, but a notification can exclude some supplies. Confirm with the tax consultant.
+9. What fills the Source Invoice No. column in IRIS? It's empty for invoices sent to the sandbox. FBR's validation reply has a `sourceInvoiceNo` field, but the spec names no request field for it. Asked PRAL in the SN017 case.
+10. How does FBR work out sales tax for Goods (FED in ST Mode)? SN017 passed with test values from a forum post, and the formula is unconfirmed. Asked PRAL in the SN017 case. The first client doesn't use this sale type.
 3. How is a discount reported to FBR? The spec has a discount field but doesn't say whether the value sent is before or after it.
 4. Are credit notes supported? The spec lists only Sale Invoice and Debit Note, but its errors mention credit notes.
-5. Does FBR accept the 7 digit NTN for a sole proprietor's token? Error 0401 ties the token to the seller's registration number, so confirm in sandbox.
+5. Does production accept the 7 digit NTN for a sole proprietor's token? The sandbox accepted it on 2026-11-04 for SN016. Production isn't tested yet.
 6. QR size: Rule 150R(13) says 7x7 mm, but PRAL's spec says 1x1 inch. See `docs/PRAL_QUESTIONS.md`.
 7. What is the e-invoicing software registration number when PRAL is the integrator?

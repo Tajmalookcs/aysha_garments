@@ -417,3 +417,105 @@ class LicensingCommandTests(TestCase):
                 call_command("make_licence", keys_dir=keys, ntn="123", name="A", out="x", stdout=StringIO())
             with self.assertRaises(CommandError):
                 call_command("make_licence", keys_dir=keys, ntn="1234567-1", name="A", out="x", stdout=StringIO())
+
+
+class StrnFormatTests(TestCase):
+    def test_saved_without_dashes_and_shown_with_them(self):
+        from core.forms import CustomerForm
+        from core.templatetags.humanize_money import strn
+
+        company = make("A", "1234567")
+        form = CustomerForm(
+            {"name": "B", "kind": "registered", "ntn_cnic": "7654321", "strn": "00-11-2222-333-44", "province": "PUNJAB", "address": "Addr"},
+            company=company,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["strn"], "0011222233344")
+        self.assertEqual(strn("0011222233344"), "00-11-2222-333-44")
+        self.assertEqual(strn("not13digits"), "not13digits")
+        self.assertEqual(strn(""), "")
+
+
+class SeedDataTests(TestCase):
+    DATA = {
+        "products": [{
+            "name": "REAL", "hs_code": "0000.0001", "uom": "KG", "pack_unit": "SET PACK", "sale_type": "Sale type A",
+            "rate_label": "1%", "rate_percent": 1, "further_tax_percent": 2, "price_per_piece": 10,
+        }],
+        "buyers": [{"name": "REAL BUYER", "kind": "registered", "ntn_cnic": "7654321", "strn": "00-11-2222-333-44", "province": "PUNJAB"}],
+        "test_products": [{
+            "name": "TEST ONE", "hs_code": "0000.0002", "uom": "KG", "sale_type": "Sale type B",
+            "rate_label": "1%", "rate_percent": 1, "further_tax_percent": 2, "price_per_piece": 100,
+        }],
+        "test_buyers": [{"name": "TEST BUYER", "kind": "unregistered", "province": "PUNJAB"}],
+        "test_invoices": [
+            {"scenario": "SN001", "buyer": "REAL BUYER", "product": "TEST ONE", "quantity": "100", "price": "100"},
+            {"scenario": "SN002", "buyer": "TEST BUYER", "product": "TEST ONE", "quantity": "100", "price": "100"},
+            {"scenario": "SN005", "buyer": "TEST BUYER", "product": "TEST ONE", "quantity": "1", "price": "1"},
+        ],
+    }
+
+    def setUp(self):
+        import json
+        import tempfile
+        from pathlib import Path
+
+        from django.contrib.auth import get_user_model
+
+        self.company = make("A", "1234567")
+        self.company.sandbox_scenarios = "SN001, SN002"
+        self.company.save()
+        user = get_user_model().objects.create_user("owner", password="x")
+        Membership.objects.create(user=user, company=self.company, role="admin")
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.path = Path(folder.name) / "seed.json"
+        self.path.write_text(json.dumps(self.DATA))
+
+    def run_seed(self, **options):
+        out = StringIO()
+        call_command("add_seed_data", file=str(self.path), stdout=out, **options)
+        return out.getvalue()
+
+    def test_adds_everything_once_and_sends_nothing(self):
+        from fbr.models import FbrApiLog
+
+        first = self.run_seed()
+        self.assertIn("Added 2 products, 2 buyers and 2 test invoices", first)
+        self.assertIn("Skipped SN005", first)
+        self.assertIn("Added 0 products, 0 buyers and 0 test invoices", self.run_seed())
+        invoices = self.company.invoices.order_by("number")
+        self.assertEqual(invoices.count(), 2)
+        self.assertEqual({i.status for i in invoices}, {"saved"})
+        self.assertEqual({i.scenario_id for i in invoices}, {"SN001", "SN002"})
+        self.assertEqual(self.company.invoices.get(scenario_id="SN001").total_further_tax, 0)
+        self.assertEqual(self.company.invoices.get(scenario_id="SN002").total_further_tax, 200)
+        self.assertEqual(self.company.customers.get(name="REAL BUYER").strn, "0011222233344")
+        self.assertEqual(FbrApiLog.objects.count(), 0)
+
+    def test_keeps_a_record_that_already_exists(self):
+        from core.models import Customer
+
+        Customer.objects.create(company=self.company, name="REAL BUYER", kind="registered", ntn_cnic="1111111", province="SINDH")
+        self.run_seed()
+        self.assertEqual(self.company.customers.get(name="REAL BUYER").ntn_cnic, "1111111")
+
+    def test_real_only_adds_no_test_records(self):
+        self.assertIn("Added 1 products, 1 buyers and 0 test invoices", self.run_seed(real_only=True))
+        self.assertFalse(self.company.products.filter(name="TEST ONE").exists())
+
+    def test_production_mode_adds_no_test_records(self):
+        self.company.fbr_mode = "production"
+        self.company.save()
+        output = self.run_seed()
+        self.assertIn("no test records", output)
+        self.assertEqual(self.company.invoices.count(), 0)
+
+    def test_bad_data_adds_nothing(self):
+        import json
+
+        data = {**self.DATA, "buyers": [{"name": "X", "kind": "registered", "ntn_cnic": "12", "province": "PUNJAB"}]}
+        self.path.write_text(json.dumps(data))
+        with self.assertRaises(CommandError):
+            self.run_seed()
+        self.assertEqual(self.company.products.count(), 0)

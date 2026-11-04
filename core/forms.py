@@ -15,6 +15,13 @@ def _use_fbr_list(form, field, name):
         form.datalists = {**getattr(form, "datalists", {}), f"dl-{field}": options}
 
 
+class StrnMixin:
+    """STRN is saved as digits only. The dashes are added only when it is shown."""
+
+    def clean_strn(self):
+        return self.cleaned_data["strn"].replace("-", "").replace(" ", "")
+
+
 class StyledMixin:
     """Apply the Bootstrap classes used across the app."""
 
@@ -32,7 +39,7 @@ class StyledMixin:
                 widget.attrs["rows"] = 2
 
 
-class CompanyForm(StyledMixin, forms.ModelForm):
+class CompanyForm(StrnMixin, StyledMixin, forms.ModelForm):
     class Meta:
         model = Company
         fields = ["business_name", "ntn", "cnic", "strn", "province", "address", "phone", "invoice_prefix"]
@@ -87,7 +94,7 @@ class ProductForm(StyledMixin, forms.ModelForm):
         return name
 
 
-class CustomerForm(StyledMixin, forms.ModelForm):
+class CustomerForm(StrnMixin, StyledMixin, forms.ModelForm):
     class Meta:
         model = Customer
         fields = ["name", "kind", "ntn_cnic", "strn", "province", "country", "address", "phone", "is_active"]

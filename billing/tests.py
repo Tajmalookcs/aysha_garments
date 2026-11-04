@@ -393,7 +393,7 @@ class PrintTests(TestCase):
         self.assertContains(page, "PENDING FBR")
         self.assertContains(page, "Not issued yet")
         self.assertContains(page, "2 lots of 5 pieces")
-        self.assertContains(page, "1111111111111")
+        self.assertContains(page, "11-11-1111-111-11")
         self.assertNotContains(page, "fbr-digital-invoicing.png")
 
     def test_sandbox_acceptance_is_never_final(self):
@@ -983,3 +983,18 @@ class StartingInvoiceNumberTests(TestCase):
         form = CompanyForm({**base, "invoice_prefix": ""}, instance=self.company)
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.save().invoice_prefix, "")
+
+
+class DisplayUnitTests(TestCase):
+    def test_a_piece_line_shows_the_fbr_unit(self):
+        from billing.models import InvoiceItem
+
+        def unit(**fields):
+            return InvoiceItem(**{"quantity": Decimal("100"), **fields}).display_unit
+
+        self.assertEqual(unit(sold_by="piece", uom="Liter"), "Liter")
+        self.assertEqual(unit(sold_by="piece", uom="Numbers, pieces, units"), "pieces")
+        self.assertEqual(unit(sold_by="piece", uom="Numbers, pieces, units", quantity=Decimal("1")), "piece")
+        self.assertEqual(unit(sold_by="lot", uom="Liter"), "pieces")
+        self.assertEqual(unit(sold_by="kg", uom="KG"), "KG")
+        self.assertEqual(unit(sold_by="pack", uom="KG", pack_unit="SET PACK"), "SET PACK")

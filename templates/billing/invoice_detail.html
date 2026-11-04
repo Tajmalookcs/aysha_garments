@@ -57,7 +57,7 @@
 
 <div class="detail-grid">
   <div><h3>Seller</h3><p>{{ invoice.seller_name }}</p><p>{{ invoice.seller_address }}</p><p>{{ invoice.seller_province }}</p>{% if invoice.seller_ntn %}<p>NTN: {{ invoice.seller_ntn }}</p>{% endif %}</div>
-  <div><h3>Buyer</h3><p>{{ invoice.buyer_name }} ({{ invoice.get_buyer_kind_display }})</p><p>{{ invoice.buyer_address }}</p><p>{% if invoice.buyer_country %}{{ invoice.buyer_country }}{% else %}{{ invoice.buyer_province }}{% endif %}</p>{% if invoice.buyer_ntn_cnic %}<p>NTN or CNIC: {{ invoice.buyer_ntn_cnic }}</p>{% endif %}{% if invoice.buyer_strn %}<p>STRN: {{ invoice.buyer_strn }}</p>{% endif %}</div>
+  <div><h3>Buyer</h3><p>{{ invoice.buyer_name }} ({{ invoice.get_buyer_kind_display }})</p><p>{{ invoice.buyer_address }}</p><p>{% if invoice.buyer_country %}{{ invoice.buyer_country }}{% else %}{{ invoice.buyer_province }}{% endif %}</p>{% if invoice.buyer_ntn_cnic %}<p>NTN or CNIC: {{ invoice.buyer_ntn_cnic }}</p>{% endif %}{% if invoice.buyer_strn %}<p>STRN: {{ invoice.buyer_strn|strn }}</p>{% endif %}</div>
   <div><h3>Invoice</h3><p>Date: {{ invoice.invoice_date|date:"d M Y" }}</p>{% if invoice.your_reference %}<p>Job no.: {{ invoice.your_reference }}</p>{% endif %}<p>IRN: {{ invoice.fbr_invoice_number|default:"Not issued yet" }}</p>{% if invoice.scenario_id %}<p>Scenario: {{ invoice.scenario_id }}</p>{% endif %}</div>
 </div>
 
