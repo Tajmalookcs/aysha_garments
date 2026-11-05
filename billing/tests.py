@@ -648,7 +648,7 @@ class CompanyNtnTests(TestCase):
         for name in ["invoice_print", "invoice_detail"]:
             page = self.client.get(reverse(name, args=[inv.pk]))
             self.assertContains(page, "NTN 1234567")
-        self.assertNotContains(page, "1234567-8")
+            self.assertNotContains(page, "1234567-8")
             self.assertNotContains(page, "1111122222333")
 
     def test_fbr_receives_the_seven_digit_ntn(self):
