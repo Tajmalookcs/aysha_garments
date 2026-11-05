@@ -90,7 +90,7 @@ These haven't been tested. To find their values:
 - **Couldn't reach FBR:** the invoice stays waiting and is marked as issued offline. Send it again when the connection returns.
 - **Unknown result, check in IRIS:** don't send it again. Look for it in IRIS first.
 - The client's own invoice number goes in `sourceInvoiceNo`. PRAL's specification and the IRIS sample don't list it. `invoiceNumber` and `invoiceRefNo` were accepted, but left Source Invoice No. empty in IRIS.
-- In one run, the sandbox accepted invoices while the IP still showed Pending in IRIS. Don't assume production will do the same.
+- For the first client, the sandbox and production both accepted invoices while the IP still showed Pending in IRIS. Don't assume this holds for every client or connection.
 - The Sold by list on an invoice line shows KG options or piece and lot, based on the product's FBR unit.
 - PRAL support is at https://dicrm.pral.com.pk. Log in with the IRIS option. Case titles can have at most 50 characters, and descriptions at most 500. IP Whitelisting is one of the query types.
 
@@ -110,4 +110,4 @@ These haven't been tested. To find their values:
 6. Save the production token in FBR setup, and enter the client's real last invoice number before the first invoice.
 7. Switch to Production mode only with the client's agreement. From then on, invoices are real.
 
-Production hasn't been tested yet. Update this section after the first client goes live.
+The first client's first real invoice was accepted on 2026-11-06. Check the print and the invoice in IRIS after the first real invoice for each client.

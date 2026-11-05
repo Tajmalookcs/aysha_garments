@@ -318,7 +318,7 @@ Built and tested locally, with the client's invoice 101 figures on made-up detai
 
 ## Build L: Open the app with no black window
 
-Status: Built locally on 2026-11-05. The owner still has to try it on Windows.
+Status: Done on 2026-11-06.
 Date proposed: 2026-11-05
 Date approved: 2026-11-05
 
@@ -329,11 +329,11 @@ Date approved: 2026-11-05
 - `start.bat` doesn't change.
 
 ### Outcome
-Can't be run on the development server, which isn't Windows. To be confirmed on the owner's PC.
+The owner tried both on Windows on 2026-11-06. `stop_app.vbs` first showed an error, because the venv's launcher and its Python end together. That's fixed, and both now work.
 
 ## Build M: Send the client's invoice number to FBR
 
-Status: Done locally on 2026-11-06. Confirmed in the sandbox only.
+Status: Done on 2026-11-06. Confirmed in the sandbox and in production.
 Date proposed: 2026-11-05
 Date approved: 2026-11-06
 
@@ -350,7 +350,8 @@ FBR's Annex-C report has an Invoice No. column with the client's own numbers. In
 - `invoiceRefNo`: the sandbox accepted the invoice on 2026-11-06, but the column stayed empty.
 - The sample JSON in IRIS has no other field for this.
 - `sourceInvoiceNo`: tried last, with the owner's approval. The sandbox accepted the invoice and IRIS showed the number in Source Invoice No. The app now sends this field.
-- FBR's replies have this field, but PRAL's specification and the IRIS sample don't. It isn't confirmed for production, or for the Invoice No. column in Annex-C. Check both on the first real invoice.
+- FBR's replies have this field, but PRAL's specification and the IRIS sample don't.
+- The first real invoice, sent on 2026-11-06, showed its number in Source Invoice No. in IRIS's production list. The Invoice No. column in Annex-C is still to be checked.
 
 ## Later builds (not approved yet)
 
