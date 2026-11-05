@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from core.decorators import company_required, working_copy_required
 from core.forms import StartNumberForm
+from fbr.payload import item_key
 from fbr.sending import mark_not_found_in_iris, record_found_in_iris, send_invoice
 from fbr.views import assigned_scenarios
 
@@ -25,6 +26,7 @@ from .services import (
     delete_invoice,
     next_invoice_number,
     parse_date,
+    share_total_kg,
     update_invoice,
 )
 
@@ -97,7 +99,9 @@ def _lines_from_post(request, products):
             discount=row.get("discount", "0"),
             kg=row.get("kg", ""),
             pack_unit=row.get("pack_unit", ""),
+            kg_total=row.get("kg_total", ""),
         ))
+    share_total_kg(lines)
     return lines
 
 
@@ -196,6 +200,8 @@ def _invoice_form(request, invoice=None, original=None):
                 "hs": p.hs_code,
                 "kg": p.is_kg,
                 "pack_unit": p.pack_unit if p.is_kg else "",
+                "uom": p.uom,
+                "kg_group": str(item_key(p)),
             }
             for p in products
         ],
@@ -329,7 +335,6 @@ def invoice_print(request, pk):
         "copy": _copy_for(request, invoice),
         "qr_svg": irn_svg(invoice.fbr_invoice_number) if invoice.is_final else None,
         "words": amount_in_words(invoice.grand_total),
-        "after_discount": invoice.total_excl_tax - invoice.total_discount,
     })
 
 

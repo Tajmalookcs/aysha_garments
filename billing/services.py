@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.models import PACK_UNITS, Company, Customer
+from fbr.payload import item_key
 
 from .models import Invoice, InvoiceItem
 
@@ -47,6 +48,28 @@ class LineInput:
     discount: object = "0"
     kg: object = ""
     pack_unit: str = ""
+    kg_total: object = ""
+
+
+def share_total_kg(lines) -> None:
+    """Share one total KG across the pack lines that go to FBR as one item, in proportion to their packs.
+
+    The client knows only the total weight. FBR adds the lines back up, so it gets that exact total.
+    """
+    groups = {}
+    for line in lines:
+        if line.sold_by == InvoiceItem.SoldBy.PACK and str(line.kg_total).strip():
+            groups.setdefault(item_key(line.product), []).append(line)
+    for group in groups.values():
+        total = _number(group[0].kg_total, "Total KG", above=0)
+        if total.as_tuple().exponent < -4:
+            raise InvoiceError("Total KG can have at most 4 decimal places.")
+        packs = [_number(line.quantity, f"Quantity for {line.product.name}", above=0) for line in group]
+        left = total
+        for line, pack in zip(group[:-1], packs):
+            line.kg = (total * pack / sum(packs)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+            left -= line.kg
+        group[-1].kg = left
 
 
 def compute_line(line: LineInput, buyer_kind: str) -> dict:

@@ -42,38 +42,40 @@
   </section>
   <table>
     <thead><tr>
-      <th>#</th><th>Item</th><th>HS code</th><th class="n">Quantity</th>{% if invoice.has_pack_lines %}<th class="n">KG</th>{% endif %}<th class="n">Price</th><th class="n">Value</th><th class="n">Discount</th><th class="n">Rate</th><th class="n">Sales tax</th>
+      <th class="n">Qty</th><th>Unit</th><th>Description</th><th>HS code</th><th class="n">Rate</th><th class="n">Value excl. tax</th>
+      {% if invoice.total_discount %}<th class="n">Discount</th>{% endif %}
+      <th class="n">ST rate</th><th class="n">Sales tax</th>
       {% if invoice.total_further_tax %}<th class="n">Further tax</th>{% endif %}
       {% if invoice.total_fed %}<th class="n">FED</th>{% endif %}
-      <th class="n">Total</th>
+      <th class="n">Value incl. tax</th>
     </tr></thead>
     <tbody>{% for l in items %}<tr>
-      <td>{{ l.line_no }}</td>
-      <td class="d"><b>{{ l.description }}</b><br><small>Unit: {{ l.uom }}</small>{% if l.sold_by == 'lot' %}<br><small>{{ l.entered_quantity|quantity }} lots of {{ l.pieces_per_lot }} pieces</small>{% endif %}{% if l.sro_schedule_no or l.sro_item_serial_no %}<br><small>SRO {{ l.sro_schedule_no|default:"-" }}, serial {{ l.sro_item_serial_no|default:"-" }}</small>{% endif %}</td>
+      <td class="n">{{ l.display_quantity|quantity }}</td>
+      <td>{{ l.display_unit }}</td>
+      <td class="d"><b>{{ l.description }}</b>{% if l.sold_by == 'lot' %}<br><small>{{ l.entered_quantity|quantity }} lots of {{ l.pieces_per_lot }} pieces</small>{% endif %}{% if l.sro_schedule_no or l.sro_item_serial_no %}<br><small>SRO {{ l.sro_schedule_no|default:"-" }}, serial {{ l.sro_item_serial_no|default:"-" }}</small>{% endif %}</td>
       <td>{{ l.hs_code }}</td>
-      <td class="n">{{ l.display_quantity|quantity }} {{ l.display_unit }}</td>{% if invoice.has_pack_lines %}<td class="n">{% if l.quantity_unit == "KG" %}{{ l.quantity|quantity }}{% endif %}</td>{% endif %}
       <td class="n">{{ l.price_per_piece|rupees }}</td>
       <td class="n">{{ l.value_excl_tax|rupees }}</td>
-      <td class="n">{{ l.discount|rupees }}</td>
-      <td class="n">{{ l.rate_label }}</td>
+      {% if invoice.total_discount %}<td class="n">{{ l.discount|rupees }}</td>{% endif %}
+      <td class="n w">{{ l.rate_label }}</td>
       <td class="n">{{ l.sales_tax|rupees }}</td>
       {% if invoice.total_further_tax %}<td class="n">{{ l.further_tax|rupees }}</td>{% endif %}
       {% if invoice.total_fed %}<td class="n">{{ l.fed_payable|rupees }}</td>{% endif %}
       <td class="n"><b>{{ l.total|rupees }}</b></td>
     </tr>{% endfor %}</tbody>
+    <tfoot><tr>
+      <td class="n">{{ invoice.total_quantity|quantity }}</td><td colspan="4">Total</td>
+      <td class="n">{{ invoice.total_excl_tax|rupees }}</td>
+      {% if invoice.total_discount %}<td class="n">{{ invoice.total_discount|rupees }}</td>{% endif %}
+      <td></td><td class="n">{{ invoice.total_sales_tax|rupees }}</td>
+      {% if invoice.total_further_tax %}<td class="n">{{ invoice.total_further_tax|rupees }}</td>{% endif %}
+      {% if invoice.total_fed %}<td class="n">{{ invoice.total_fed|rupees }}</td>{% endif %}
+      <td class="n">{{ invoice.grand_total|rupees }}</td>
+    </tr></tfoot>
   </table>
   <section class="sum">
-    <div class="words"><h3>Amount in words</h3><p>{{ words }}</p></div>
-    <div class="tot">
-      {% if invoice.total_kg %}<div><span>Total weight</span><span>{{ invoice.total_kg|quantity }} KG</span></div>{% endif %}
-      <div><span>Value before discount</span><span>{{ invoice.total_excl_tax|rupees }}</span></div>
-      <div><span>Discount</span><span>- {{ invoice.total_discount|rupees }}</span></div>
-      <div><span>Value after discount</span><span>{{ after_discount|rupees }}</span></div>
-      <div><span>Sales tax</span><span>{{ invoice.total_sales_tax|rupees }}</span></div>
-      <div><span>Further tax</span><span>{{ invoice.total_further_tax|rupees }}</span></div>
-      {% if invoice.total_fed %}<div><span>FED</span><span>{{ invoice.total_fed|rupees }}</span></div>{% endif %}
-      <div class="big"><span>Total (Rs)</span><span>{{ invoice.grand_total|rupees }}</span></div>
-    </div>
+    <div class="words">{% if invoice.total_kg %}<p class="weight">Total weight: <b>{{ invoice.total_kg|quantity }} KG</b></p>{% endif %}<h3>Amount in words</h3><p>{{ words }}</p></div>
+    <div class="tot"><div class="big"><span>Total (Rs)</span><span>{{ invoice.grand_total|rupees }}</span></div></div>
   </section>
   {% if copy.kind == 'final' %}
   <section class="fbr">

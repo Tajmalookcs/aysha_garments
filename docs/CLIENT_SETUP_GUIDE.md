@@ -21,7 +21,7 @@ Done once by the developer, on the developer's computer. This is already done.
 - [ ] Products: name, HS code, unit, sale type, rate, price, and pack unit if charged by the pack
 - [ ] Buyers: name, NTN or CNIC, STRN, province and address
 - [ ] Whether it sells to unregistered buyers
-- [ ] KG for each invoice line, if it's charged by the pack and reports KG
+- [ ] Total KG for each invoice, if it's charged by the pack and reports KG
 - [ ] Last invoice number before the app
 
 The Annex-C report answers most product and buyer questions. Check the rest with the client or the tax consultant.
@@ -42,6 +42,8 @@ The Annex-C report answers most product and buyer questions. Check the rest with
 Each test invoice is saved, with its scenario already chosen and a job number starting with `TEST-`. Nothing goes to FBR until someone presses Approve and send. Running it again adds nothing new.
 
 STRN is saved as digits only. Invoices show the dashes.
+
+The invoice form asks for Qty, Unit, Product and Rate on each line, and one Total KG. It asks for a separate Total KG only for lines that differ in HS code, sale type, rate or SRO, because FBR needs their weights separately. Invoices show each line's HS code in its own column.
 
 ## 4. Run the sandbox scenarios
 

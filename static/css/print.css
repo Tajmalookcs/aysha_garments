@@ -23,7 +23,9 @@ thead { display: table-header-group; }
 tr { break-inside: avoid; }
 th { text-align: left; font-weight: 600; border-bottom: 1.5pt solid #1C2764; padding: 1.5mm 1mm; color: #3f4566; white-space: nowrap; }
 td { border-bottom: .5pt solid #bfc4da; padding: 2mm 1mm; vertical-align: top; white-space: nowrap; }
-td.d { white-space: normal; }
+td.d, td.w { white-space: normal; }
+tfoot td { font-weight: 700; border-top: 1.5pt solid #1C2764; border-bottom: 1.5pt solid #1C2764; }
+.weight { margin: 0 0 3mm; font-size: 10pt; }
 small { color: #555C7D; }
 .n { text-align: right; font-variant-numeric: tabular-nums; }
 .sum { display: flex; justify-content: space-between; gap: 10mm; margin-top: 6mm; break-inside: avoid; }

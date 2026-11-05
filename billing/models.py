@@ -158,6 +158,10 @@ class Invoice(models.Model):
         return sum((i.quantity for i in self.items.all() if i.quantity_unit == "KG"), Decimal("0"))
 
     @property
+    def total_quantity(self):
+        return sum((i.display_quantity for i in self.items.all()), Decimal("0"))
+
+    @property
     def can_send(self):
         return self.status == self.Status.WAITING
 

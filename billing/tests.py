@@ -15,6 +15,7 @@ from billing.services import (
     compute_line,
     create_invoice,
     delete_invoice,
+    share_total_kg,
     update_invoice,
 )
 from core.forms import CompanyForm, ProductForm
@@ -718,7 +719,7 @@ class OfflineAndPrintRuleTests(TestCase):
         self._post()
         page = self.client.get(reverse("invoice_print", args=[Invoice.objects.get().pk]))
         self.assertContains(page, "November 2026")
-        self.assertContains(page, "Unit: Numbers, pieces, units")
+        self.assertNotContains(page, "Unit: ")
         self.assertContains(page, "SRO SRO 297, serial 12")
 
     def test_print_leaves_out_sro_when_not_used(self):
@@ -921,7 +922,7 @@ class PackAndKgTests(TestCase):
 
         invoice = self._invoice(self._line(self.duvet, "100", "85", "300"), reference="JOB-777")
         html = self.client.get(f"/invoices/{invoice.pk}/print/").content.decode()
-        for text in ["Job no.", "JOB-777", "11-22-3333-444-55", "100 SET PACK", "Total weight", "300 KG"]:
+        for text in ["Job no.", "JOB-777", "11-22-3333-444-55", "SET PACK", "Total weight", "300 KG"]:
             self.assertIn(text, html)
         sent = json.dumps(build_payload(invoice))
         self.assertNotIn("JOB-777", sent)
@@ -998,3 +999,45 @@ class DisplayUnitTests(TestCase):
         self.assertEqual(unit(sold_by="lot", uom="Liter"), "pieces")
         self.assertEqual(unit(sold_by="kg", uom="KG"), "KG")
         self.assertEqual(unit(sold_by="pack", uom="KG", pack_unit="SET PACK"), "SET PACK")
+
+
+class TotalKgTests(TestCase):
+    """Made-up figures. The client gives one weight for the invoice."""
+
+    def setUp(self):
+        self.company = Company.objects.create(business_name="A", ntn="1234567-1", province="PUNJAB", address="X")
+        self.one = self._product("One")
+        self.two = self._product("Two")
+        self.other = self._product("Other", hs="1111.1111")
+
+    def _product(self, name, hs="0000.0000"):
+        return Product.objects.create(
+            company=self.company, name=name, hs_code=hs, uom="KG", pack_unit="SET PACK", sale_type="Sample",
+            rate_label="18%", rate_percent=Decimal("18"), price_per_piece=Decimal("1"),
+        )
+
+    def _line(self, product, packs, total):
+        return LineInput(product, "pack", packs, "", "1", "0", pack_unit="SET PACK", kg_total=total)
+
+    def test_total_is_shared_by_packs_and_adds_up_exactly(self):
+        lines = [self._line(self.one, "1", "100"), self._line(self.two, "2", "100")]
+        share_total_kg(lines)
+        self.assertEqual(lines[0].kg, Decimal("33.3333"))
+        self.assertEqual(lines[1].kg, Decimal("66.6667"))
+        self.assertEqual(lines[0].kg + lines[1].kg, Decimal("100"))
+
+    def test_lines_that_differ_keep_their_own_total(self):
+        lines = [self._line(self.one, "1", "100"), self._line(self.other, "5", "40")]
+        share_total_kg(lines)
+        self.assertEqual((lines[0].kg, lines[1].kg), (Decimal("100"), Decimal("40")))
+
+    def test_bad_totals_are_refused(self):
+        for total in ["0", "-1", "1.12345", "abc"]:
+            with self.assertRaises(InvoiceError):
+                share_total_kg([self._line(self.one, "1", total)])
+
+    def test_empty_total_is_refused_when_saving(self):
+        line = self._line(self.one, "1", "")
+        share_total_kg([line])
+        with self.assertRaises(InvoiceError):
+            compute_line(line, Customer.Kind.REGISTERED)

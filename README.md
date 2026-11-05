@@ -40,7 +40,7 @@ aysha_garments/
 
 ## Status
 
-Core app built: company, login, products, customers, invoices and approval. Invoice printing is built, including the QR code. The sales register, backup, lookups, buyer checks and debit notes are built. Invoices work by KG, which is the default, by pack with KG, or by piece or lot. The demo, registration and developer password are built. Production mode is built but off until a registered copy switches it on. All 9 assigned scenarios have passed the FBR sandbox. Production isn't tested yet.
+Core app built: company, login, products, customers, invoices and approval. Invoice printing is built, including the QR code. The sales register, backup, lookups, buyer checks and debit notes are built. Invoices follow the client's slip layout, with one Total KG. They work by KG, which is the default, by pack with KG, or by piece or lot. The demo, registration and developer password are built. Production mode is built but off until a registered copy switches it on. All 9 assigned scenarios have passed the FBR sandbox. Production isn't tested yet.
 
 ## Run it
 

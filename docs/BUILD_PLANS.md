@@ -293,6 +293,29 @@ Status: Done on 2026-11-05. The owner asked for it directly.
 - `docs/seed_data.example.json` is a starting point with made-up details.
 - `licensing/demo.json` and `licensing/public_key.pem` added, so new installs can be set up.
 
+## Build K: Invoice layout like the client's slip
+
+Status: Done locally on 2026-11-05.
+Date proposed: 2026-11-05
+Date approved: 2026-11-05
+
+### Goal
+The owner compared the app with the client's Excel slip. The app mixed quantity and unit, and was harder to read.
+
+### Work
+- Invoice screen and print: separate Qty and Unit columns, HS code on each line in its own column, a totals row with total quantity, and Total weight below.
+- Discount, further tax and FED columns show only when they have an amount.
+- Invoice form: Qty, Unit, Product, Rate. One Unit list replaces Sold by and Pack unit. Discount stays hidden until clicked.
+- One Total KG for the invoice. Pack lines that go to FBR as one item share it in proportion to their packs. Lines that differ get their own Total KG.
+- Tax and the invoice data sent to FBR don't change.
+
+### Decisions
+- Total KG as above: the owner agreed on 2026-11-05.
+- HS code on every line: the owner's instruction on 2026-11-05.
+
+### Outcome
+Built and tested locally, with the client's invoice 101 figures on made-up details. Totals matched the slip. No FBR connection was used.
+
 ## Later builds (not approved yet)
 
 3. Run the sandbox scenarios from the whitelisted computer.

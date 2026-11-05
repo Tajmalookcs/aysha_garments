@@ -8,17 +8,22 @@ def _n(value) -> float:
     return float(Decimal(value))
 
 
+def item_key(record) -> tuple:
+    """What FBR checks on an item. Works for a product or an invoice line."""
+    return (record.hs_code, record.sale_type, record.rate_label, record.uom, record.sro_schedule_no,
+            record.sro_item_serial_no, record.fixed_notified_value)
+
+
 def group_items(items) -> list:
     """The FBR items for an invoice, each a list of invoice lines.
 
     Pack lines that match on everything FBR checks go as one item, with their KG, value and tax
     added up. Pack lines that differ stay separate. Every other line is its own item.
-    To confirm in sandbox: whether FBR accepts the combined item.
+    The sandbox accepted a combined item on 2026-11-04.
     """
     groups, by_key = [], {}
     for item in items:
-        key = (item.hs_code, item.sale_type, item.rate_label, item.uom, item.sro_schedule_no,
-               item.sro_item_serial_no, item.fixed_notified_value)
+        key = item_key(item)
         if item.sold_by == "pack" and key in by_key:
             by_key[key].append(item)
             continue
