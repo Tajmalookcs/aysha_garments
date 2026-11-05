@@ -158,6 +158,10 @@ class Invoice(models.Model):
         return sum((i.quantity for i in self.items.all() if i.quantity_unit == "KG"), Decimal("0"))
 
     @property
+    def buyer_number_label(self):
+        return "CNIC" if len(self.buyer_ntn_cnic) == 13 else "NTN"
+
+    @property
     def total_quantity(self):
         return sum((i.display_quantity for i in self.items.all()), Decimal("0"))
 

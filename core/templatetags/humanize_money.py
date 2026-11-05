@@ -25,3 +25,9 @@ def strn(value):
     if len(text) == 13 and text.isdigit():
         return f"{text[:2]}-{text[2:4]}-{text[4:8]}-{text[8:11]}-{text[11:]}"
     return text
+
+
+@register.filter
+def ntn(value):
+    """Invoices show the 7 digit NTN, without the check digit after a dash."""
+    return str(value or "").split("-")[0].strip()

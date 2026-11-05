@@ -519,3 +519,13 @@ class SeedDataTests(TestCase):
         with self.assertRaises(CommandError):
             self.run_seed()
         self.assertEqual(self.company.products.count(), 0)
+
+
+class NtnFormatTests(TestCase):
+    def test_invoices_show_the_seven_digit_ntn(self):
+        from core.templatetags.humanize_money import ntn
+
+        self.assertEqual(ntn("1234567-1"), "1234567")
+        self.assertEqual(ntn("1234567"), "1234567")
+        self.assertEqual(ntn("1234567890123"), "1234567890123")
+        self.assertEqual(ntn(""), "")

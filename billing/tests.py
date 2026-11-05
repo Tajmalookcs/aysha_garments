@@ -647,7 +647,8 @@ class CompanyNtnTests(TestCase):
         inv = self._invoice()
         for name in ["invoice_print", "invoice_detail"]:
             page = self.client.get(reverse(name, args=[inv.pk]))
-            self.assertContains(page, "1234567-8")
+            self.assertContains(page, "NTN 1234567")
+        self.assertNotContains(page, "1234567-8")
             self.assertNotContains(page, "1111122222333")
 
     def test_fbr_receives_the_seven_digit_ntn(self):
@@ -1041,3 +1042,10 @@ class TotalKgTests(TestCase):
         share_total_kg([line])
         with self.assertRaises(InvoiceError):
             compute_line(line, Customer.Kind.REGISTERED)
+
+
+class BuyerNumberLabelTests(TestCase):
+    def test_label_follows_the_number(self):
+        self.assertEqual(Invoice(buyer_ntn_cnic="1234567").buyer_number_label, "NTN")
+        self.assertEqual(Invoice(buyer_ntn_cnic="123456789").buyer_number_label, "NTN")
+        self.assertEqual(Invoice(buyer_ntn_cnic="1234567890123").buyer_number_label, "CNIC")

@@ -17,7 +17,7 @@
     <div>
       <h1>{{ invoice.seller_name|title }}</h1>
       <p>{{ invoice.seller_address }}, {{ invoice.seller_province|title }}</p>
-      <p>{% if invoice.seller_ntn %}NTN {{ invoice.seller_ntn }}{% endif %}{% if invoice.seller_strn %} &nbsp; STRN {{ invoice.seller_strn|strn }}{% endif %}</p>
+      <p>{% if invoice.seller_ntn %}NTN {{ invoice.seller_ntn|ntn }}{% endif %}{% if invoice.seller_strn %} &nbsp; STRN {{ invoice.seller_strn|strn }}{% endif %}</p>
     </div>
     <div class="title">
       <h2>{% if invoice.is_debit_note %}Debit Note{% else %}Sales Tax Invoice{% endif %}</h2>
@@ -37,7 +37,7 @@
     <h3>Bill to</h3>
     <p><b>{{ invoice.buyer_name }}</b> ({{ invoice.get_buyer_kind_display }})</p>
     <p>{{ invoice.buyer_address }}{% if invoice.buyer_province %}, {{ invoice.buyer_province }}{% endif %}{% if invoice.buyer_country %}, {{ invoice.buyer_country }}{% endif %}</p>
-    {% if invoice.buyer_ntn_cnic %}<p>NTN or CNIC {{ invoice.buyer_ntn_cnic }}</p>{% endif %}
+    {% if invoice.buyer_ntn_cnic %}<p>{{ invoice.buyer_number_label }} {{ invoice.buyer_ntn_cnic|ntn }}</p>{% endif %}
     {% if invoice.buyer_strn %}<p>STRN {{ invoice.buyer_strn|strn }}</p>{% endif %}
   </section>
   <table>
