@@ -17,7 +17,7 @@ from django.utils import timezone
 from billing.services import LineInput, approve_invoice, create_invoice, next_invoice_number
 from core import licence
 from core.models import Company, Customer, Membership, Product
-from core.testing import DEMO_PASSWORD, DEVELOPER_PASSWORD, licence_bytes, use_test_licensing
+from core.testing import DEMO_PASSWORD, DEVELOPER_PASSWORD, licence_bytes, unlock_developer_pages, use_test_licensing
 from fbr.models import FbrCredential
 from fbr.sending import send_invoice
 
@@ -262,6 +262,7 @@ class DemoAndRegistrationTests(TestCase):
     # ---- Production
 
     def test_production_needs_registration_then_a_token_and_a_tick(self):
+        unlock_developer_pages(self.client)
         cred = FbrCredential(company=self.company, environment="production")
         cred.token = "prod-token-abcdefgh"
         cred.save()
@@ -288,6 +289,7 @@ class DemoAndRegistrationTests(TestCase):
         request.assert_not_called()
 
     def test_sandbox_setting_works_during_the_demo(self):
+        unlock_developer_pages(self.client)
         self.assertContains(self.client.get("/fbr/"), "The sandbox works during the demo")
 
     # ---- Developer password

@@ -11,7 +11,7 @@ from django.urls import reverse
 from billing.models import Invoice
 from billing.services import LineInput, approve_invoice, create_invoice
 from core.models import Company, Customer, Membership, Product
-from core.testing import register_copy
+from core.testing import register_copy, unlock_developer_pages
 from fbr.constants import POST_SANDBOX, VALIDATE_SANDBOX
 from fbr.models import FbrApiLog, FbrCredential, RefList
 from fbr.parsing import INVALID, UNCLEAR, VALID, parse
@@ -92,6 +92,7 @@ class Base(TestCase):
         cred.token = TOKEN
         cred.save()
         self.client.force_login(self.user)
+        unlock_developer_pages(self.client)
 
     def invoice(self, customer=None, discount="0"):
         inv = create_invoice(company=self.company, customer=customer or self.reg, invoice_date=date(2026, 11, 2),
@@ -514,3 +515,35 @@ class InvoiceNumberPayloadTests(TestCase):
         data = build_payload(invoice)
         self.assertEqual(data["sourceInvoiceNo"], "119")
         self.assertEqual(data["invoiceRefNo"], "")
+
+
+class DeveloperPasswordTests(Base):
+    PAGES = ["fbr_setup", "fbr_rates", "fbr_lookups"]
+    ACTIONS = ["fbr_save_token", "fbr_mode", "fbr_save_scenarios", "fbr_test", "fbr_download"]
+
+    def setUp(self):
+        super().setUp()
+        session = self.client.session
+        del session["developer_unlocked_until"]
+        session.save()
+
+    def test_pages_ask_for_the_password(self):
+        for name in self.PAGES:
+            self.assertContains(self.client.get(reverse(name)), "Only the developer can open this page")
+
+    def test_actions_change_nothing_without_the_password(self):
+        before = (self.company.fbr_mode, self.company.sandbox_scenarios)
+        data = {"mode": "sandbox", "token": "new-token-abcdefgh", "scenarios": "SN001", "environment": "production"}
+        for name in self.ACTIONS:
+            self.assertContains(self.client.post(reverse(name), data), "Only the developer can open this page")
+        self.company.refresh_from_db()
+        self.assertEqual((self.company.fbr_mode, self.company.sandbox_scenarios), before)
+        self.assertFalse(FbrCredential.objects.filter(company=self.company, environment="production").exists())
+
+    def test_wrong_password_is_refused(self):
+        page = self.client.post(reverse("fbr_setup"), {"developer_password": "wrong"})
+        self.assertContains(page, "That password is wrong")
+
+    def test_invoice_screens_stay_open(self):
+        for name in ["dashboard", "invoice_list", "invoice_new", "customer_list"]:
+            self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)

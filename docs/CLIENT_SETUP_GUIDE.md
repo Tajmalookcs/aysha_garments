@@ -30,7 +30,7 @@ The Annex-C report answers most product and buyer questions. Check the rest with
 
 1. Get the latest `main`, and run `start.bat`.
 2. Finish the setup screen, using the demo password. After the first run, use `start_app.vbs`, which opens the app with no black window and adds desktop shortcuts to start and stop it.
-3. Under FBR setup, save the sandbox token, enter the assigned scenarios, and download FBR's lists.
+3. Under FBR setup, which asks for the developer password, save the sandbox token, enter the assigned scenarios, and download FBR's lists.
 
 ## 3. Add the data with the seed file
 

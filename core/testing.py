@@ -52,3 +52,12 @@ def register_copy(test, company):
     """Set up a temporary licence folder with a registered copy for this company."""
     key = use_test_licensing(test)
     (test.licence_folder / "licence.json").write_bytes(licence_bytes(key, company.ntn))
+
+
+def unlock_developer_pages(client):
+    """Open the pages that ask for the developer password, for tests of what's behind them."""
+    import time
+
+    session = client.session
+    session["developer_unlocked_until"] = time.time() + 600
+    session.save()

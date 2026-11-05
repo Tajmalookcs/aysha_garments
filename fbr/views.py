@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from billing.models import Invoice
-from core.decorators import company_required
+from core.decorators import company_required, developer_required
 from core.models import Customer
 
 from . import client, refs
@@ -18,7 +18,7 @@ def assigned_scenarios(company):
     return [c for c in re.split(r"[\s,]+", company.sandbox_scenarios.upper()) if c in SCENARIOS]
 
 
-@company_required
+@developer_required
 def setup(request):
     company = request.company
     credential = FbrCredential.objects.filter(company=company, environment="sandbox").first()
@@ -43,7 +43,7 @@ def setup(request):
 
 
 @require_POST
-@company_required
+@developer_required
 def save_token(request):
     raw = request.POST.get("token", "").strip()
     environment = request.POST.get("environment", "sandbox")
@@ -61,7 +61,7 @@ def save_token(request):
 
 
 @require_POST
-@company_required
+@developer_required
 def switch_mode(request):
     """Moving to production means real invoices, so it needs a token and a clear confirmation."""
     company = request.company
@@ -85,7 +85,7 @@ def switch_mode(request):
 
 
 @require_POST
-@company_required
+@developer_required
 def save_scenarios(request):
     entered = [c for c in re.split(r"[\s,]+", request.POST.get("scenarios", "").upper()) if c]
     unknown = [c for c in entered if c not in SCENARIOS]
@@ -99,7 +99,7 @@ def save_scenarios(request):
 
 
 @require_POST
-@company_required
+@developer_required
 def test_connection(request):
     try:
         result = client.call(request.company, "GET", REFERENCE_LISTS["provinces"][0])
@@ -118,7 +118,7 @@ def test_connection(request):
 
 
 @require_POST
-@company_required
+@developer_required
 def download_lists(request):
     try:
         saved, problems = refs.download_all(request.company)
@@ -132,7 +132,7 @@ def download_lists(request):
     return redirect("fbr_setup")
 
 
-@company_required
+@developer_required
 def rate_lookup(request):
     types = refs.rows("transaction_types")
     provinces = refs.rows("provinces")
@@ -154,13 +154,13 @@ def rate_lookup(request):
     return render(request, "fbr/rate_lookup.html", context)
 
 
-@company_required
+@developer_required
 def log_detail(request, pk):
     entry = get_object_or_404(request.company.fbr_logs, pk=pk)
     return render(request, "fbr/log_detail.html", {"entry": entry})
 
 
-@company_required
+@developer_required
 def lookups(request):
     kind = request.GET.get("kind", "")
     query = {k: request.GET.get(k, "").strip() for k in ("hs", "an", "rate", "pr", "sro")}

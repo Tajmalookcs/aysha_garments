@@ -1,5 +1,3 @@
-import time
-
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth import views as auth_views
@@ -7,7 +5,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .decorators import company_required
+from .decorators import company_required, developer_unlocked, unlock_developer
 from . import licence
 from .forms import CompanyForm, CustomerForm, DeveloperPasswordForm, FirstRunForm, ProductForm
 from .models import Company, Customer, Membership, Product
@@ -108,21 +106,13 @@ def customer_edit(request, pk=None):
 
 # ---------- Company ----------
 
-UNLOCK_KEY = "developer_unlocked_until"
-UNLOCK_SECONDS = 10 * 60
-
-
-def _developer_unlocked(request):
-    return request.session.get(UNLOCK_KEY, 0) > time.time()
-
-
 @company_required
 def company_edit(request):
     """Only the developer changes these details, so the page asks for the developer password."""
-    if not _developer_unlocked(request):
+    if not developer_unlocked(request):
         form = DeveloperPasswordForm(request.POST or None, company=request.company)
         if request.method == "POST" and form.is_valid():
-            request.session[UNLOCK_KEY] = time.time() + UNLOCK_SECONDS
+            unlock_developer(request)
             return redirect("company_edit")
         return render(request, "core/form_page.html", {
             "form": form,

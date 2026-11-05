@@ -353,6 +353,23 @@ FBR's Annex-C report has an Invoice No. column with the client's own numbers. In
 - FBR's replies have this field, but PRAL's specification and the IRIS sample don't.
 - The first real invoice, sent on 2026-11-06, showed its number in Source Invoice No. in IRIS's production list. The Invoice No. column in Annex-C is still to be checked.
 
+## Build N: Developer password on FBR setup
+
+Status: Done locally on 2026-11-06.
+Date proposed: 2026-11-06
+Date approved: 2026-11-06
+
+### Goal
+A client could change the FBR mode or token by accident, which can stop real invoices or send them as tests.
+
+### Work
+- FBR setup, the token, mode, scenarios, connection test, FBR lists, Find tax rates, Lookups and FBR logs now ask for the developer password. It stays open for 10 minutes.
+- Invoices, sending to FBR, printing, Customers and the buyer check stay open.
+- Tax and the invoice data sent to FBR don't change.
+
+### Outcome
+Built and tested locally without any FBR connection.
+
 ## Later builds (not approved yet)
 
 3. Run the sandbox scenarios from the whitelisted computer.
