@@ -116,6 +116,7 @@ The invoice header appears **once**; line items go in the `items[]` array.
 | `buyerAddress` | string | ✔ | |
 | `buyerRegistrationType` | string | ✔ | `"Registered"` or `"Unregistered"` |
 | `invoiceRefNo` | string | conditional | **Required for debit notes only.** 22 digits (NTN) / 28 digits (CNIC) |
+| `sourceInvoiceNo` | string | not in the spec | The seller's own invoice number. Found by testing on 2026-11-06: in the sandbox it fills Source Invoice No. in IRIS. Production not confirmed. |
 | `scenarioId` | string | **sandbox only** | e.g. `"SN001"` — see [03-CODES-AND-SCENARIOS.md](03-CODES-AND-SCENARIOS.md). **Omit in production.** |
 | `items` | array | ✔ | |
 

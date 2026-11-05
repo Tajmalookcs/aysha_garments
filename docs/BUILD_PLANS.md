@@ -316,6 +316,42 @@ The owner compared the app with the client's Excel slip. The app mixed quantity 
 ### Outcome
 Built and tested locally, with the client's invoice 101 figures on made-up details. Totals matched the slip. No FBR connection was used.
 
+## Build L: Open the app with no black window
+
+Status: Built locally on 2026-11-05. The owner still has to try it on Windows.
+Date proposed: 2026-11-05
+Date approved: 2026-11-05
+
+### Work
+- `start_app.vbs` opens the app with no window. If the app is already running, it only opens the browser. On a first run it uses `start.bat`, so the install progress shows. It shows a message box if something fails, and writes details to `instance/app.log`.
+- `stop_app.vbs` stops the app.
+- The first run of `start_app.vbs` adds desktop shortcuts to start and stop the app.
+- `start.bat` doesn't change.
+
+### Outcome
+Can't be run on the development server, which isn't Windows. To be confirmed on the owner's PC.
+
+## Build M: Send the client's invoice number to FBR
+
+Status: Done locally on 2026-11-06. Confirmed in the sandbox only.
+Date proposed: 2026-11-05
+Date approved: 2026-11-06
+
+### Goal
+FBR's Annex-C report has an Invoice No. column with the client's own numbers. Invoices sent by the app so far leave IRIS's Source Invoice No. column empty.
+
+### Plan
+- PRAL's specification names no field for this. It says `invoiceRefNo` is only for debit notes. Two third-party sources disagree, with one using `invoiceNumber` and the other `invoiceRefNo`.
+- Try `invoiceNumber` first, then `invoiceRefNo`, on a test database. The owner runs these sandbox tests from the home connection.
+- Keep the field that shows the number in IRIS. If neither works, hold real invoices until PRAL answers.
+
+### Outcome
+- `invoiceNumber`: the sandbox accepted the invoice on 2026-11-06, but the Source Invoice No. column in IRIS stayed empty.
+- `invoiceRefNo`: the sandbox accepted the invoice on 2026-11-06, but the column stayed empty.
+- The sample JSON in IRIS has no other field for this.
+- `sourceInvoiceNo`: tried last, with the owner's approval. The sandbox accepted the invoice and IRIS showed the number in Source Invoice No. The app now sends this field.
+- FBR's replies have this field, but PRAL's specification and the IRIS sample don't. It isn't confirmed for production, or for the Invoice No. column in Annex-C. Check both on the first real invoice.
+
 ## Later builds (not approved yet)
 
 3. Run the sandbox scenarios from the whitelisted computer.

@@ -29,7 +29,7 @@ The Annex-C report answers most product and buyer questions. Check the rest with
 ## 2. Install and set up
 
 1. Get the latest `main`, and run `start.bat`.
-2. Finish the setup screen, using the demo password.
+2. Finish the setup screen, using the demo password. After the first run, use `start_app.vbs`, which opens the app with no black window and adds desktop shortcuts to start and stop it.
 3. Under FBR setup, save the sandbox token, enter the assigned scenarios, and download FBR's lists.
 
 ## 3. Add the data with the seed file
@@ -89,6 +89,7 @@ These haven't been tested. To find their values:
 - **0131, sales tax doesn't match for FED in ST Mode:** use the SN017 values above.
 - **Couldn't reach FBR:** the invoice stays waiting and is marked as issued offline. Send it again when the connection returns.
 - **Unknown result, check in IRIS:** don't send it again. Look for it in IRIS first.
+- The client's own invoice number goes in `sourceInvoiceNo`. PRAL's specification and the IRIS sample don't list it. `invoiceNumber` and `invoiceRefNo` were accepted, but left Source Invoice No. empty in IRIS.
 - In one run, the sandbox accepted invoices while the IP still showed Pending in IRIS. Don't assume production will do the same.
 - The Sold by list on an invoice line shows KG options or piece and lot, based on the product's FBR unit.
 - PRAL support is at https://dicrm.pral.com.pk. Log in with the IRIS option. Case titles can have at most 50 characters, and descriptions at most 500. IP Whitelisting is one of the query types.

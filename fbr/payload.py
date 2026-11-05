@@ -78,6 +78,8 @@ def build_payload(invoice, scenario_id: str = "") -> dict:
         "buyerAddress": invoice.buyer_address,
         "buyerRegistrationType": "Registered" if invoice.buyer_kind == "registered" else "Unregistered",
         "invoiceRefNo": invoice.invoice_ref_no,
+        # Not in PRAL's specification. In the sandbox on 2026-11-06, this filled Source Invoice No. in IRIS.
+        "sourceInvoiceNo": invoice.number,
         "items": [_fbr_item(lines) for lines in group_items(invoice.items.all())],
     }
     if scenario_id:

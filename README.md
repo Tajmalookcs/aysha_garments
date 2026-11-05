@@ -22,6 +22,8 @@ aysha_garments/
 ├── templates/, static/     Screens, design and local Bootstrap, icons and fonts
 ├── start.bat               Starts the app on Windows
 ├── add_demo_data.bat       Adds labelled demo products, customers and invoices
+├── start_app.vbs           Opens the app with no black window, and adds desktop shortcuts
+├── stop_app.vbs            Stops the app when it runs with no window
 ├── add_seed_data.bat       Adds a client's records and sandbox test invoices from instance/seed_data.json
 ├── backup.bat              Backs up the database, keys and media
 ├── instance/               Local database and secret keys; created on first run, never pushed

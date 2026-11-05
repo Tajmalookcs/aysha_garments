@@ -497,3 +497,20 @@ class LookupTests(Base):
         other = Company.objects.create(business_name="OTHER", ntn="7777777-1", province="P", address="A", invoice_prefix="OO")
         customer = Customer.objects.create(company=other, name="B", kind="registered", ntn_cnic="1111111", province="P", address="A")
         self.assertEqual(self.client.post(reverse("fbr_check_customer", args=[customer.pk])).status_code, 404)
+
+
+class InvoiceNumberPayloadTests(TestCase):
+    def test_the_clients_own_number_is_sent(self):
+        from types import SimpleNamespace
+
+        from fbr.payload import build_payload
+
+        invoice = SimpleNamespace(
+            number="119", invoice_type="Sale Invoice", invoice_date=date(2026, 11, 4), seller_ntn_cnic="1234567",
+            seller_name="A", seller_province="PUNJAB", seller_address="X", buyer_ntn_cnic="7654321", buyer_name="B",
+            buyer_province="PUNJAB", buyer_address="Y", buyer_kind="registered", invoice_ref_no="",
+            items=SimpleNamespace(all=lambda: []),
+        )
+        data = build_payload(invoice)
+        self.assertEqual(data["sourceInvoiceNo"], "119")
+        self.assertEqual(data["invoiceRefNo"], "")
