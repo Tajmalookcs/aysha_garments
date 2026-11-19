@@ -405,6 +405,27 @@ Date approved: 2026-11-19, after the owner saw the mockups
 ### Outcome
 Built and tested locally without any FBR connection, and checked in a browser at desktop and phone widths.
 
+## Build Q: Update a client's copy from GitHub
+
+Status: Done locally on 2026-11-19.
+Date proposed: 2026-11-19
+Date approved: 2026-11-19
+
+### Goal
+Update the app on a client's computer without sending a whole new folder, and without sending anything the client wasn't given.
+
+### Work
+- `update_app.bat` runs `update_app.py`, which uses Python's standard library only. No Git is needed. The repository must stay public.
+- It asks GitHub which files changed between the client's version and `main`, and downloads only those that are on the delivery list: the billing, config, core, fbr, licensing, static and templates folders, and manage.py, requirements.txt, start.bat, start_app.vbs, stop_app.vbs, backup.bat, update_app.bat and update_app.py. Tests, documents, developer files and anything else are never downloaded.
+- It never touches instance, media or venv.
+- It stops if the app is open. It downloads everything first, then backs up the instance folder and the files it will change in backups\update_<date and time>, then changes them. If a change fails, it puts the old files back.
+- The client's version is kept in instance\app_version.txt. A copy with no version file is taken as the delivery of 2026-11-06, commit ef9389e. Each update is noted in instance\update.log.
+- Afterwards it opens the app with start_app.vbs, which applies any database changes and new packages.
+- Anything pushed to main reaches a client the next time it runs the update.
+
+### Outcome
+Tested with made-up GitHub replies, and once against GitHub on a copy of the delivered files: it changed the 13 app files that differ from ef9389e, left out tests and documents, and the result matched main.
+
 ## Later builds (not approved yet)
 
 3. Run the sandbox scenarios from the whitelisted computer.

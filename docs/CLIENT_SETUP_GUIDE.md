@@ -111,3 +111,7 @@ These haven't been tested. To find their values:
 7. Switch to Production mode only with the client's agreement. From then on, invoices are real.
 
 The first client's first real invoice was accepted on 2026-11-06. Check the print and the invoice in IRIS after the first real invoice for each client.
+
+## Updating a client's copy
+
+Push the change to `main`, then ask the client to close the app and run `update_app.bat`. It downloads only the delivered app files that changed, backs up first, and leaves the client's data alone. Copies delivered before the updater existed need `update_app.bat` and `update_app.py` copied into their folder once.

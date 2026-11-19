@@ -588,3 +588,74 @@ class LoginScreenTests(TestCase):
 
     def test_closing_the_browser_signs_out(self):
         self.assertTrue(settings.SESSION_EXPIRE_AT_BROWSER_CLOSE)
+
+
+class UpdaterTests(TestCase):
+    """update_app.py, with GitHub replaced by made-up replies. No network is used."""
+
+    def setUp(self):
+        import importlib.util
+        import tempfile
+
+        spec = importlib.util.spec_from_file_location("update_app", Path(settings.BASE_DIR) / "update_app.py")
+        self.u = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.u)
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        self.root = Path(folder.name)
+        for path, text in {"core/views.py": "old", "core/old.py": "gone", "instance/db.sqlite3": "data",
+                           "docs/notes.md": "mine", "manage.py": "old manage"}.items():
+            (self.root / path).parent.mkdir(parents=True, exist_ok=True)
+            (self.root / path).write_text(text)
+        self.compare = {"status": "ahead", "files": [
+            {"filename": "core/views.py", "status": "modified"},
+            {"filename": "static/js/login.js", "status": "added"},
+            {"filename": "core/old.py", "status": "removed"},
+            {"filename": "core/tests.py", "status": "modified"},
+            {"filename": "docs/notes.md", "status": "modified"},
+            {"filename": "CLAUDE.md", "status": "modified"},
+            {"filename": "instance/db.sqlite3", "status": "modified"},
+            {"filename": "core/__pycache__/x.pyc", "status": "added"},
+        ]}
+
+    def fake_get(self, fail_on=None):
+        def get(url):
+            if "/compare/" in url:
+                return json.dumps(self.compare).encode()
+            if fail_on and url.endswith(fail_on):
+                raise self.u.UpdateError("Couldn't reach GitHub.")
+            return ("new " + url.rsplit("/", 1)[-1]).encode()
+        return get
+
+    def test_only_delivered_app_files_are_chosen(self):
+        u = self.u
+        for path in ["core/views.py", "static/js/login.js", "templates/base.html", "manage.py", "update_app.py"]:
+            self.assertTrue(u.is_app_file(path), path)
+        for path in ["core/tests.py", "core/testing.py", "docs/notes.md", "CLAUDE.md", "README.md", "instance/db.sqlite3",
+                     "media/x.pdf", "reference/a.pdf", "add_demo_data.bat", "core/__pycache__/x.pyc", "../core/views.py"]:
+            self.assertFalse(u.is_app_file(path), path)
+
+    def test_update_changes_only_app_files_and_backs_up_first(self):
+        steps = self.u.changes("a", "b", get=self.fake_get())
+        self.assertEqual(steps, [("write", "core/views.py"), ("write", "static/js/login.js"), ("delete", "core/old.py")])
+        backup = self.u.apply(steps, "b", self.root, get=self.fake_get(), stamp="t")
+        self.assertEqual((self.root / "core/views.py").read_text(), "new views.py")
+        self.assertEqual((self.root / "static/js/login.js").read_text(), "new login.js")
+        self.assertFalse((self.root / "core/old.py").exists())
+        self.assertEqual((self.root / "instance/db.sqlite3").read_text(), "data")
+        self.assertEqual((self.root / "docs/notes.md").read_text(), "mine")
+        self.assertFalse((self.root / "core/tests.py").exists())
+        self.assertEqual((backup / "files/core/views.py").read_text(), "old")
+        self.assertEqual((backup / "instance/db.sqlite3").read_text(), "data")
+
+    def test_failed_download_changes_nothing(self):
+        steps = self.u.changes("a", "b", get=self.fake_get())
+        with self.assertRaises(self.u.UpdateError):
+            self.u.apply(steps, "b", self.root, get=self.fake_get(fail_on="login.js"), stamp="t")
+        self.assertEqual((self.root / "core/views.py").read_text(), "old")
+        self.assertTrue((self.root / "core/old.py").exists())
+
+    def test_a_copy_off_the_developers_versions_is_refused(self):
+        self.compare["status"] = "diverged"
+        with self.assertRaises(self.u.UpdateError):
+            self.u.changes("a", "b", get=self.fake_get())
