@@ -370,6 +370,41 @@ A client could change the FBR mode or token by accident, which can stop real inv
 ### Outcome
 Built and tested locally without any FBR connection.
 
+## Build O: Invoice date in words
+
+Status: Done locally on 2026-11-19.
+Date proposed: 2026-11-19
+Date approved: 2026-11-19
+
+### Goal
+Invoice 120 went to FBR dated 11-Apr-2026 instead of 04-Nov-2026. The date box follows the Windows format, so 04/11 was taken as month/day. Taken from Imtiaz Weaving build 11.
+
+### Work
+- Under the date box on the invoice form, the date shows in words, for example 4 November 2026 (Wednesday).
+- A date more than 30 days old, or in the future, shows a red warning. It doesn't stop saving.
+- Tax, the data sent to FBR and the database don't change.
+
+### Outcome
+Built and tested locally without any FBR connection.
+
+## Build P: Invoice form, print and login changes from Imtiaz Weaving
+
+Status: Done on 2026-11-19.
+Date proposed: 2026-11-19
+Date approved: 2026-11-19, after the owner saw the mockups
+
+### Work
+- Invoice form: each line is one row, Item, Unit, Quantity and Rate, with the item's HS code under it. The line's note no longer repeats the HS code.
+- Printed invoice: columns Item, Unit, HS code, Quantity, Rate, Value excl. tax, ST rate, Sales tax and Value incl. tax. Bill to is now Buyer Details. The NTN still prints with 7 digits.
+- In production mode, the invoice page has no instruction lines, and a print made before FBR accepts the invoice has no PENDING FBR mark, no "Not a final invoice" notice and no "IRN not issued yet" box. The owner chose this, knowing such a print then differs from a final one only by the missing FBR logo, QR code and IRN. Sandbox, sandbox-test and demo prints keep their marks.
+- Printed invoices end with a small line, "Digital Invoicing setup & support: Alamgir Developers · 0304-6270546", from DEVELOPER_CONTACT in config/settings.py. An empty name prints no line. The owner chose to keep this number in the public repository.
+- Change password: a link by the user name in the menu. The user stays signed in.
+- Login: closing the browser signs the user out. A tick box, "Remember my user name and password on this computer", keeps both in this browser's storage. The owner chose this, knowing anyone using that browser can see the saved password.
+- Tax, the data sent to FBR and the database don't change.
+
+### Outcome
+Built and tested locally without any FBR connection, and checked in a browser at desktop and phone widths.
+
 ## Later builds (not approved yet)
 
 3. Run the sandbox scenarios from the whitelisted computer.

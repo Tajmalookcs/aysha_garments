@@ -1,7 +1,8 @@
 from django.contrib import messages
-from django.contrib.auth import get_user_model, login
+from django.contrib.auth import get_user_model, login, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -149,3 +150,18 @@ def registration(request):
                 messages.success(request, f"This copy is registered to {details['business_name']}. The demo has ended.")
         return redirect("registration")
     return render(request, "core/registration.html")
+
+
+@login_required
+def password_change(request):
+    """The signed-in user changes their own password and stays signed in."""
+    form = PasswordChangeForm(request.user, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
+        update_session_auth_hash(request, user)
+        messages.success(request, "Your password has been changed.")
+        return redirect("dashboard")
+    return render(request, "core/form_page.html", {
+        "form": form, "title": "Change password", "intro": "Enter your current password, then the new one twice.",
+        "save_label": "Change password", "back": "dashboard",
+    })

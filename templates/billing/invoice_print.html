@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ invoice.number }} {{ copy.title }}</title>
+<title>{{ invoice.number }}{% if copy.title %} {{ copy.title }}{% endif %}</title>
 <link rel="stylesheet" href="{% static 'css/print.css' %}">
 </head>
 <body class="{{ copy.kind }}">
@@ -34,7 +34,7 @@
   {% if invoice.issued_offline %}<p class="notice offline">Issued in offline mode.{% if not invoice.fbr_invoice_number %} To be uploaded to FBR within 24 hours of the connection returning.{% endif %}</p>{% endif %}
   <div class="seam"></div>
   <section class="buyer">
-    <h3>Bill to</h3>
+    <h3>Buyer Details</h3>
     <p><b>{{ invoice.buyer_name }}</b> ({{ invoice.get_buyer_kind_display }})</p>
     <p>{{ invoice.buyer_address }}{% if invoice.buyer_province %}, {{ invoice.buyer_province }}{% endif %}{% if invoice.buyer_country %}, {{ invoice.buyer_country }}{% endif %}</p>
     {% if invoice.buyer_ntn_cnic %}<p>{{ invoice.buyer_number_label }} {{ invoice.buyer_ntn_cnic|ntn }}</p>{% endif %}
@@ -42,7 +42,7 @@
   </section>
   <table>
     <thead><tr>
-      <th class="n">Qty</th><th>Unit</th><th>Description</th><th>HS code</th><th class="n">Rate</th><th class="n">Value excl. tax</th>
+      <th>Item</th><th>Unit</th><th>HS code</th><th class="n">Quantity</th><th class="n">Rate</th><th class="n">Value excl. tax</th>
       {% if invoice.total_discount %}<th class="n">Discount</th>{% endif %}
       <th class="n">ST rate</th><th class="n">Sales tax</th>
       {% if invoice.total_further_tax %}<th class="n">Further tax</th>{% endif %}
@@ -50,10 +50,10 @@
       <th class="n">Value incl. tax</th>
     </tr></thead>
     <tbody>{% for l in items %}<tr>
-      <td class="n">{{ l.display_quantity|quantity }}</td>
-      <td>{{ l.display_unit }}</td>
       <td class="d"><b>{{ l.description }}</b>{% if l.sold_by == 'lot' %}<br><small>{{ l.entered_quantity|quantity }} lots of {{ l.pieces_per_lot }} pieces</small>{% endif %}{% if l.sro_schedule_no or l.sro_item_serial_no %}<br><small>SRO {{ l.sro_schedule_no|default:"-" }}, serial {{ l.sro_item_serial_no|default:"-" }}</small>{% endif %}</td>
+      <td>{{ l.display_unit }}</td>
       <td>{{ l.hs_code }}</td>
+      <td class="n">{{ l.display_quantity|quantity }}</td>
       <td class="n">{{ l.price_per_piece|rupees }}</td>
       <td class="n">{{ l.value_excl_tax|rupees }}</td>
       {% if invoice.total_discount %}<td class="n">{{ l.discount|rupees }}</td>{% endif %}
@@ -64,7 +64,7 @@
       <td class="n"><b>{{ l.total|rupees }}</b></td>
     </tr>{% endfor %}</tbody>
     <tfoot><tr>
-      <td class="n">{{ invoice.total_quantity|quantity }}</td><td colspan="4">Total</td>
+      <td colspan="3">Total</td><td class="n">{{ invoice.total_quantity|quantity }}</td><td></td>
       <td class="n">{{ invoice.total_excl_tax|rupees }}</td>
       {% if invoice.total_discount %}<td class="n">{{ invoice.total_discount|rupees }}</td>{% endif %}
       <td></td><td class="n">{{ invoice.total_sales_tax|rupees }}</td>
@@ -83,13 +83,13 @@
     {% if qr_svg %}<div class="qr-code">{{ qr_svg }}</div>{% else %}<div class="qr qr-error">QR code could not be made. Don't issue this invoice.</div>{% endif %}
     <div class="irn"><small>FBR invoice number (IRN)</small><b>{{ invoice.fbr_invoice_number }}</b>{% if invoice.fbr_dated %}<small>Dated {{ invoice.fbr_dated }}</small>{% endif %}</div>
   </section>
-  {% else %}
+  {% elif copy.kind != 'plain' %}
   <section class="fbr nofbr">
     <div class="irn"><small>FBR invoice number (IRN)</small><b>{{ invoice.fbr_invoice_number|default:"Not issued yet" }}</b>{% if invoice.fbr_dated %}<small>Dated {{ invoice.fbr_dated }}</small>{% endif %}</div>
     <p>The FBR logo and QR code print only on invoices FBR accepts in production.</p>
   </section>
   {% endif %}
-  <footer><div class="sign">Authorised signature</div></footer>
+  <footer><div class="sign">Authorised signature</div>{% if developer.name %}<p class="dev-contact">{{ developer.label }} <b>{{ developer.name }}</b> · {{ developer.phone }}</p>{% endif %}</footer>
 </main>
 <script src="{% static 'js/print.js' %}"></script>
 </body>

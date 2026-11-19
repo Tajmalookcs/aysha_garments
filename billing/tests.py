@@ -412,6 +412,37 @@ class PrintTests(TestCase):
         self.assertContains(page, "DEMO ONLY")
         self.assertNotContains(page, "fbr-digital-invoicing.png")
 
+    def test_columns_and_buyer_heading(self):
+        page = self._page(self._invoice()).content.decode()
+        heads = ["<th>Item</th>", "<th>Unit</th>", "<th>HS code</th>", '<th class="n">Quantity</th>', '<th class="n">Rate</th>']
+        self.assertEqual([page.index(h) for h in heads], sorted(page.index(h) for h in heads))
+        self.assertIn("Buyer Details", page)
+        self.assertNotIn("Bill to", page)
+
+    def test_developer_line_prints(self):
+        self.assertContains(self._page(self._invoice()), "Alamgir Developers")
+        with self.settings(DEVELOPER_CONTACT={"label": "", "name": "", "phone": ""}):
+            self.assertNotContains(self._page(self._invoice()), "dev-contact")
+
+    def test_production_print_before_acceptance_has_no_pending_marks(self):
+        self.company.fbr_mode = "production"
+        self.company.save()
+        page = self._page(self._invoice())
+        for text in ["PENDING FBR", "Not a final invoice", "Not issued yet", "Pending FBR"]:
+            self.assertNotContains(page, text)
+        self.assertNotContains(page, "fbr-digital-invoicing.png")
+
+    def test_production_invoice_page_has_no_instruction_lines(self):
+        inv = self._invoice()
+        detail = lambda: self.client.get(reverse("invoice_detail", args=[inv.pk]))
+        self.assertContains(detail(), "Check the details below")
+        self.company.fbr_mode = "production"
+        self.company.save()
+        page = detail()
+        for text in ["Production mode: this goes", "Check the details below", "This is not a final invoice"]:
+            self.assertNotContains(page, text)
+        self.assertContains(page, "Approve and send to FBR")
+
     def test_rejected_and_unknown_are_not_final(self):
         for status in ["rejected", "check", "waiting", "held"]:
             inv = self._invoice()

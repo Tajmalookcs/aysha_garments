@@ -102,3 +102,14 @@ if _test_base.startswith("http://127.0.0.1:"):
     FBR_BASE_URL = _test_base
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Closing the browser signs the user out, so the app asks for the password each time it's opened.
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# A small line at the bottom of every printed invoice. Leave the name empty to print no line.
+DEVELOPER_CONTACT = {
+    "label": "Digital Invoicing setup & support:",
+    "name": "Alamgir Developers",
+    "phone": "0304-6270546",
+}

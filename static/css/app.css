@@ -105,7 +105,9 @@ h1, h2, h3 { font-family: "Bricolage Grotesque", var(--bs-body-font-family); let
 /* Invoice */
 .invoice-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 36px; align-items: start; }
 .export-note { background: #FCF0D6; color: #5e3a00; padding: 10px 12px; border-radius: 6px; font-size: .92rem; }
-.line { display: grid; grid-template-columns: 96px 136px minmax(160px, 2.4fr) 100px 34px; gap: 10px; padding: 14px 0; border-top: 2px dashed var(--line); align-items: end; }
+.line { display: grid; grid-template-columns: minmax(170px, 2.4fr) 136px 110px 100px 34px; gap: 10px; padding: 14px 0; border-top: 2px dashed var(--line); align-items: start; }
+.line > .rm { align-self: start; margin-top: 30px; }
+.hs-cap { margin-top: 3px; font-size: .78rem; color: var(--mute); font-variant-numeric: tabular-nums; }
 .line .form-label { font-size: .8rem; color: var(--mute); }
 .line .form-control, .line .form-select { padding-inline: .55rem; }
 .line .form-select { padding-right: 1.7rem; }
@@ -164,7 +166,7 @@ h1, h2, h3 { font-family: "Bricolage Grotesque", var(--bs-body-font-family); let
   .line > .f-product, .line-meta { grid-column: 1 / -1; }
   .lot-pieces { grid-column: 1 / -1; }
   .line-discount { grid-column: 1 / -1; }
-  .rm { grid-column: 1 / -1; justify-self: end; }
+  .line > .rm { grid-column: 2; justify-self: end; align-self: end; margin-top: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .q-reveal, .q-thread-reveal { animation: none; stroke-dashoffset: 0; }
@@ -211,3 +213,8 @@ h1, h2, h3 { font-family: "Bricolage Grotesque", var(--bs-body-font-family); let
 .register-totals { margin-bottom: 20px; }
 .register-foot td { font-weight: 700; border-top: 2px solid var(--indigo); }
 .ledger td .small .status { font-size: .82rem; }
+
+.date-words { margin-top: 4px; font-size: .92rem; color: var(--indigo); }
+.date-words.warn b { color: #b42318; }
+.date-warn { display: block; color: #b42318; font-weight: 600; font-size: .85rem; }
+.rail-user a { color: #fff; font-size: .88rem; }

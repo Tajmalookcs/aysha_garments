@@ -36,7 +36,7 @@
       {% if licence and not licence.registered %}<a class="demo-left" href="{% url 'registration' %}">{% if licence.expired %}Demo ended{% else %}Demo: {{ licence.days_left }} day{{ licence.days_left|pluralize }} left{% endif %}</a>{% endif %}
       <div id="net" class="net"><i class="bi bi-wifi"></i><span>Online</span></div>
       <form method="post" action="{% url 'logout' %}" class="rail-user">
-        {% csrf_token %}<span>{{ request.user.username }}</span><button type="submit">Log out</button>
+        {% csrf_token %}<span>{{ request.user.username }}</span><a href="{% url 'password_change' %}">Change password</a><button type="submit">Log out</button>
       </form>
     </div>
   </aside>

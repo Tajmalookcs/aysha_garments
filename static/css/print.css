@@ -54,3 +54,4 @@ footer { margin-top: 22mm; break-inside: avoid; }
   .sheet { width: auto; min-height: 0; margin: 0; padding: 0; overflow: visible; }
 }
 @media (max-width: 800px) { .stamp { font-size: 32pt; } }
+.dev-contact { margin: 8mm 0 0; text-align: center; font-size: 7.5pt; color: #6b7080; }

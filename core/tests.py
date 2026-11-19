@@ -12,6 +12,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import CommandError, call_command
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from billing.services import LineInput, approve_invoice, create_invoice, next_invoice_number
@@ -531,3 +532,59 @@ class NtnFormatTests(TestCase):
         self.assertEqual(ntn("1234567"), "1234567")
         self.assertEqual(ntn("1234567890123"), "1234567890123")
         self.assertEqual(ntn(""), "")
+
+
+class PasswordChangeTests(TestCase):
+    """Each user can change their own password and stays signed in."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        from core.testing import register_copy
+
+        self.company = make("A", "1234567")
+        self.user = get_user_model().objects.create_user("owner", password="Old-pass-2026")
+        Membership.objects.create(user=self.user, company=self.company, role="admin")
+        self.client.force_login(self.user)
+        register_copy(self, self.company)
+
+    def test_link_is_in_the_menu(self):
+        self.assertContains(self.client.get(reverse("dashboard")), reverse("password_change"))
+
+    def test_change_with_the_right_current_password(self):
+        page = self.client.post(reverse("password_change"), {
+            "old_password": "Old-pass-2026", "new_password1": "Garments-Nov-2026", "new_password2": "Garments-Nov-2026"}, follow=True)
+        self.assertContains(page, "Your password has been changed.")
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("Garments-Nov-2026"))
+        self.assertEqual(self.client.get(reverse("dashboard")).status_code, 200)
+
+    def test_wrong_current_password_changes_nothing(self):
+        self.client.post(reverse("password_change"), {
+            "old_password": "wrong", "new_password1": "Garments-Nov-2026", "new_password2": "Garments-Nov-2026"})
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("Old-pass-2026"))
+
+    def test_new_passwords_must_match(self):
+        self.client.post(reverse("password_change"), {
+            "old_password": "Old-pass-2026", "new_password1": "Garments-Nov-2026", "new_password2": "Garments-Nov-2027"})
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("Old-pass-2026"))
+
+    def test_signed_out_users_are_sent_to_log_in(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("password_change")).status_code, 302)
+
+
+class LoginScreenTests(TestCase):
+    def test_remember_box_and_its_script(self):
+        from django.contrib.auth import get_user_model
+
+        get_user_model().objects.create_user("owner", password="x")
+        page = self.client.get(reverse("login"))
+        self.assertContains(page, 'id="remember"')
+        self.assertContains(page, "Remember my user name and password on this computer")
+        self.assertContains(page, "js/login.js")
+
+    def test_closing_the_browser_signs_out(self):
+        self.assertTrue(settings.SESSION_EXPIRE_AT_BROWSER_CLOSE)

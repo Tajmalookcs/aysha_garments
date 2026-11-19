@@ -31,10 +31,10 @@
   </div>
 </header>
 
-{% if invoice.can_approve or invoice.can_send %}<p class="sub mb-2">{% if fbr_mode == 'production' %}<strong>Production mode: this goes to FBR as a real invoice.</strong>{% else %}Sandbox mode: this goes to FBR as a test only.{% endif %}</p>{% endif %}
+{% if fbr_mode != 'production' and invoice.can_approve or fbr_mode != 'production' and invoice.can_send %}<p class="sub mb-2">Sandbox mode: this goes to FBR as a test only.</p>{% endif %}
 {% if invoice.issued_offline %}<p class="export-note"><i class="bi bi-exclamation-triangle"></i> Issued in offline mode. {% if not invoice.fbr_invoice_number %}FBR's rule is to upload it within 24 hours of the connection returning.{% endif %}</p>{% endif %}
 {% if invoice.is_debit_note %}<p class="sub mb-2">Against invoice <a href="{% url 'invoice_detail' invoice.original_id %}">{{ invoice.original.number }}</a>, IRN {{ invoice.invoice_ref_no }}.</p>{% endif %}
-{% if invoice.status == 'saved' %}<p class="sub mb-2">Check the details below. You can still edit or delete it. Nothing goes to FBR until it's approved, and it's locked after that.</p>{% endif %}
+{% if invoice.status == 'saved' and fbr_mode != 'production' %}<p class="sub mb-2">Check the details below. You can still edit or delete it. Nothing goes to FBR until it's approved, and it's locked after that.</p>{% endif %}
 {% if invoice.status == 'waiting' %}<p class="sub mb-2">Approved{% if invoice.approved_by %} by {{ invoice.approved_by.username }}{% endif %}. Locked and waiting to send.</p>{% endif %}
 {% if invoice.last_error and invoice.status != 'check' %}<p class="flash error" role="alert">{{ invoice.last_error }}</p>{% endif %}
 {% if invoice.status == 'rejected' %}<p class="sub mb-2">Fix the problem with Edit, then send it again.</p>{% endif %}
@@ -53,7 +53,7 @@
 {% endif %}
 {% if invoice.status == 'accepted' and invoice.fbr_environment == 'sandbox' %}<p class="flash success">Accepted in the FBR sandbox. This is a test and doesn't count as a real invoice.</p>{% endif %}
 {% if invoice.status == 'held' %}<p class="export-note"><i class="bi bi-exclamation-triangle"></i> This export invoice can't be approved or sent yet. FBR's rules for foreign buyers, and the tax shown here, still need to be confirmed.</p>{% endif %}
-{% if not invoice.is_final %}<p class="sub mb-4">This is not a final invoice. A final invoice needs an IRN from FBR's production system.</p>{% endif %}
+{% if not invoice.is_final and fbr_mode != 'production' %}<p class="sub mb-4">This is not a final invoice. A final invoice needs an IRN from FBR's production system.</p>{% endif %}
 
 <div class="detail-grid">
   <div><h3>Seller</h3><p>{{ invoice.seller_name }}</p><p>{{ invoice.seller_address }}</p><p>{{ invoice.seller_province }}</p>{% if invoice.seller_ntn %}<p>NTN: {{ invoice.seller_ntn|ntn }}</p>{% endif %}</div>

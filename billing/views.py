@@ -1,3 +1,4 @@
+from django.conf import settings
 import json
 from decimal import Decimal
 
@@ -321,6 +322,10 @@ def _copy_for(request, invoice):
     """Everything printed by a demo copy says so."""
     copy = invoice.print_copy
     if request.licence.registered or invoice.is_final:
+        # The owner's choice (2026-11-19): in production, a print made before FBR accepts the invoice
+        # has no pending marks. Only the FBR logo, QR code and IRN are missing until it's accepted.
+        if copy["kind"] == "pending" and request.company.fbr_mode == "production":
+            return {"kind": "plain", "title": "", "stamp": "", "notice": ""}
         return copy
     return {**copy, "kind": "demo", "title": "Demo", "stamp": "DEMO",
             "notice": f"DEMO VERSION. {copy['notice']}"}
@@ -335,6 +340,7 @@ def invoice_print(request, pk):
         "copy": _copy_for(request, invoice),
         "qr_svg": irn_svg(invoice.fbr_invoice_number) if invoice.is_final else None,
         "words": amount_in_words(invoice.grand_total),
+        "developer": settings.DEVELOPER_CONTACT,
     })
 
 

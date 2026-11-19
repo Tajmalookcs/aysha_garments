@@ -68,11 +68,12 @@
       const discount = l.showDiscount || num(l.discount) > 0
         ? `<div class="line-discount"><label class="form-label" for="dc${l.id}">Discount</label><input class="form-control num" id="dc${l.id}" data-l="${l.id}" data-f="discount" type="number" min="0" step="0.01" value="${esc(l.discount)}"></div>`
         : `<button class="btn btn-link add-discount" type="button" data-disc="${l.id}"><i class="bi bi-plus-lg"></i> Discount</button>`;
+      const chosen = product(l.product);
       return `<div class="line">
-        <div><label class="form-label" for="qt${l.id}">Qty</label><input class="form-control num" id="qt${l.id}" data-l="${l.id}" data-f="quantity" type="number" min="0" step="any" value="${esc(l.quantity)}"></div>
-        <div><label class="form-label" for="un${l.id}">Unit</label><select class="form-select" id="un${l.id}" data-l="${l.id}" data-f="unit">${unitOptions(l)}</select></div>
-        <div class="f-product"><label class="form-label" for="pr${l.id}">Product</label><select class="form-select" id="pr${l.id}" data-l="${l.id}" data-f="product">${opts}</select></div>
-        <div><label class="form-label" for="dp${l.id}">Rate</label><input class="form-control num" id="dp${l.id}" data-l="${l.id}" data-f="price" type="number" min="0" step="0.01" value="${esc(l.price)}"></div>
+        <div class="f-product"><label class="form-label" for="pr${l.id}">Item</label><select class="form-select" id="pr${l.id}" data-l="${l.id}" data-f="product">${opts}</select><div class="hs-cap">HS Code: ${esc(chosen.hs)}</div></div>
+        <div class="f-unit"><label class="form-label" for="un${l.id}">Unit</label><select class="form-select" id="un${l.id}" data-l="${l.id}" data-f="unit">${unitOptions(l)}</select></div>
+        <div class="f-qty"><label class="form-label" for="qt${l.id}">Quantity</label><input class="form-control num" id="qt${l.id}" data-l="${l.id}" data-f="quantity" type="number" min="0" step="any" value="${esc(l.quantity)}"></div>
+        <div class="f-rate"><label class="form-label" for="dp${l.id}">Rate</label><input class="form-control num" id="dp${l.id}" data-l="${l.id}" data-f="price" type="number" min="0" step="0.01" value="${esc(l.price)}"></div>
         <button class="rm" type="button" data-rm="${l.id}" aria-label="Remove this item" ${lines.length === 1 ? "disabled" : ""}><i class="bi bi-x-lg"></i></button>
         ${lot}${discount}
         <div class="line-meta"><span id="meta${l.id}"></span><strong id="amt${l.id}"></strong></div>
@@ -98,7 +99,7 @@
       excl += v; st += s + fed; ft += f; disc += d;
       const meta = $("meta" + l.id), amt = $("amt" + l.id);
       kg += l.sold_by === "kg" ? pieces : 0;
-      if (meta) meta.textContent = `Value ${rs(v)}, HS ${p.hs}, sales tax ${num(p.rate)}%`;
+      if (meta) meta.textContent = `Value ${rs(v)}, sales tax ${num(p.rate)}%`;
       if (amt) amt.textContent = rs(v + s + f + fed - d);
     });
     kgGroups().forEach((g) => { kg += num(kgTotals[g.key]); });
@@ -162,5 +163,25 @@
       else if (d.kg) kgTotals[key] = String(Math.round((num(kgTotals[key]) + num(d.kg)) * 10000) / 10000);
     }
   });
+  /* The date in words, so day and month can't be mixed up. The box's own format follows Windows. */
+  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const showDate = () => {
+    const box = $("dateWords"), m = /^(\d{4})-(\d{2})-(\d{2})$/.exec($("date").value || "");
+    if (!box) return;
+    if (!m) { box.textContent = ""; box.className = "date-words"; return; }
+    const d = new Date(+m[1], +m[2] - 1, +m[3]);
+    const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const age = Math.round((today - d) / 86400000);
+    const text = `${d.getDate()} ${MONTHS[d.getMonth()]} ${m[1]} (${DAYS[d.getDay()]})`;
+    let warn = "";
+    if (age > 30) warn = `This date is ${age} days old. Check it before saving.`;
+    else if (age < 0) warn = "This date is in the future. Check it before saving.";
+    box.innerHTML = `<b>${text}</b>${warn ? `<span class="date-warn">${warn}</span>` : ""}`;
+    box.className = "date-words" + (warn ? " warn" : "");
+  };
+  $("date").addEventListener("input", showDate);
+  $("date").addEventListener("change", showDate);
+  showDate();
   render();
 })();
